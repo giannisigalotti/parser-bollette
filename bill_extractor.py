@@ -1286,6 +1286,10 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
         if column in frame.columns:
             frame[column] = pd.to_datetime(frame[column], errors="coerce")
 
+    # Ordina per data inizio periodo fatturazione (crescente)
+    if "billing_period_start" in frame.columns:
+        frame["billing_period_start"] = pd.to_datetime(frame["billing_period_start"], errors="coerce")
+        frame = frame.sort_values("billing_period_start", ascending=True)
     # Modifica intestazioni per unit_rate
     columns_with_units = [col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith('_unit_rate') else col for col in frame.columns]
     

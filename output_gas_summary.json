@@ -1,0 +1,73 @@
+{
+  "service_type": "gas",
+  "columns": [
+    {
+      "source": "pdr_code",
+      "title": "PDR"
+    },
+    {
+      "source": "supply_address",
+      "title": "Indirizzo"
+    },
+    {
+      "source": "tariff_code",
+      "title": "Nome offerta"
+    },
+    {
+      "source": "invoice_date",
+      "title": "Data fattura"
+    },
+    {
+      "source": "billing_period_start",
+      "title": "Periodo riferimento inizio"
+    },
+    {
+      "source": "billing_period_end",
+      "title": "Periodo riferimento fine"
+    },
+    {
+      "source": "consumption_smc",
+      "title": "Consumi Smc"
+    },
+    {
+      "source": "estimated_consumption_smc",
+      "title": "Consumi stimati Smc"
+    },
+    {
+      "source": "fixed_fee_imponibile_eur",
+      "title": "Costo quota fissa"
+    },
+    {
+      "source": "variable_fee_imponibile_eur",
+      "title": "Costo quota consumi"
+    },
+    {
+      "source": "gas_sales_eur",
+      "title": "Spesa vendita gas"
+    },
+    {
+      "source": "network_charges_eur",
+      "title": "Spesa rete e oneri"
+    },
+    {
+      "source": "system_charges_eur",
+      "title": "Oneri generali sistema"
+    },
+    {
+      "source": "excise_eur",
+      "title": "Accise"
+    },
+    {
+      "source": "vat_eur",
+      "title": "IVA"
+    },
+    {
+      "source": "invoice_total_eur",
+      "title": "Totale bolletta"
+    },
+    {
+      "source": "total_amount_eur",
+      "title": "Totale da pagare"
+    }
+  ]
+}

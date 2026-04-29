@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 
-from ..extractors import extract_with_patterns
+from ...extractors import extract_with_patterns
 from ..models import BillRecord
-from ..text_utils import decimal_to_str, parse_date, parse_decimal
+from ...text_utils import decimal_to_str, parse_date, parse_decimal
 
 
 def build_iren_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]:
@@ -64,7 +64,6 @@ def build_iren_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         if extracted:
             overrides[field] = extracted
 
-    # Billing period: "PERIODO 01 APRILE 2023 - 31 MAGGIO 2023"
     period_match = re.search(
         r"PERIODO\s+(\d{1,2}\s+[A-Z]+\s+\d{4})\s*-\s*(\d{1,2}\s+[A-Z]+\s+\d{4})",
         raw_text,
@@ -78,7 +77,6 @@ def build_iren_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         if end:
             overrides["billing_period_end"] = end
 
-    # TV license: amount appears on the line after the multi-line label
     tv_match = re.search(
         r"[Cc]anone di abbonamento alla televisione[^\n]*\n[^\n]*\n\s*([0-9]+,[0-9]{2})",
         raw_text,

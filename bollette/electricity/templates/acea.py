@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import re
 
-from ..extractors import extract_with_patterns, extract_section, extract_acea_fascia_consumptions
+from ...extractors import extract_with_patterns
+from ..extractors import extract_section, extract_acea_fascia_consumptions
 from ..models import BillRecord
-from ..templates.base import build_generic_regex_overrides
-from ..text_utils import (
+from .base import build_generic_regex_overrides
+from ...text_utils import (
     normalize_text,
     parse_date,
     parse_decimal,

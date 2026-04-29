@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from ..extractors import extract_with_patterns
+from ...extractors import extract_with_patterns
 from ..models import BillRecord
 
 
@@ -90,21 +90,18 @@ def build_sen_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
         if extracted:
             overrides[field] = extracted
 
-    # Invoice date: "Del 10.02.2017" (dot-separated, not handled by extract_by_kind)
     date_match = re.search(r"[Dd]el\s+(\d{2}\.\d{2}\.\d{4})", raw_text)
     if date_match:
         d = _parse_dot_date(date_match.group(1))
         if d:
             overrides["invoice_date"] = d
 
-    # Due date: "Entro il 02.03.2017"
     due_match = re.search(r"Entro il\s+(\d{2}\.\d{2}\.\d{4})", raw_text)
     if due_match:
         d = _parse_dot_date(due_match.group(1))
         if d:
             overrides["due_date"] = d
 
-    # Billing period: "GEN.2017 - FEB.2017" under BIMESTRE header
     period_match = re.search(
         r"BIMESTRE\s*\n\s*([A-Z]{3}\.?\s*\d{4})\s*-\s*([A-Z]{3}\.?\s*\d{4})",
         raw_text,
@@ -118,7 +115,6 @@ def build_sen_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
         if end:
             overrides["billing_period_end"] = end
 
-    # Consumption: "Totale energia\nattiva kWh.................... 166"
     cons_match = re.search(
         r"Totale energia\s+attiva kWh[.\s]*([0-9]+)",
         raw_text,
@@ -126,7 +122,6 @@ def build_sen_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
     if cons_match:
         overrides["consumption_kwh"] = cons_match.group(1)
 
-    # F1/F2/F3 breakdown in "consumo fatturato" section
     f1 = re.search(r"ORE DI PUNTA\s+\(F1\)\s+([0-9]+)", raw_text)
     f2 = re.search(r"ORE INTERMEDIE\s+\(F2\)\s+([0-9]+)", raw_text)
     f3 = re.search(r"ORE FUORI PUNTA\s+\(F3\)\s+([0-9]+)", raw_text)

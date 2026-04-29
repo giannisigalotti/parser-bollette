@@ -121,6 +121,18 @@ python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
 ```
 
 L'output Excel/CSV contiene una riga per ogni PDF trovato nella cartella.
+Se la cartella contiene sia bollette luce sia bollette gas, il CLI le separa in due output:
+
+```bash
+python3 bill_extractor.py ./pdf_bollette \
+  --electricity-output output/bollette_luce.xlsx \
+  --gas-output output/bollette_gas.xlsx \
+  -c output_columns.energy_summary.json \
+  --gas-config output_gas_summary.json
+```
+
+Se passi solo `-o` e l'input e' misto, `-o` viene usato per la luce e il file gas viene creato accanto con suffisso `_gas`.
+Se l'input contiene solo gas, `-o` viene usato direttamente per il gas.
 
 ### Configurazione colonne output
 
@@ -147,6 +159,9 @@ Formato del file:
 `source` deve essere una delle colonne interne elencate nella sezione "Cosa estrae".
 `title` e' opzionale: se manca, viene usato il nome tecnico della colonna.
 La sequenza nel JSON e' la sequenza delle colonne nel file finale.
+Per i template gas si usa lo stesso formato, aggiungendo `"service_type": "gas"` e scegliendo colonne dal tracciato gas.
+Il tracciato gas completo viene usato di default quando non passi `--gas-config`; include dati cliente/contratto,
+PDR, offerta, periodo, consumi Smc, letture contatore, caratteristiche tecniche, accise/IVA e dettagli quota fissa/consumi.
 
 ## GUI desktop
 
@@ -154,8 +169,9 @@ La sequenza nel JSON e' la sequenza delle colonne nel file finale.
 python3 gui_bollette.py
 ```
 
-La GUI mostra una combo "Template output" con tutti i file `output_*.json` presenti nella cartella di lancio/applicazione.
-Se lasci "Default - tutte le colonne", l'export usa tutte le colonne standard.
+La GUI mostra due combo, una per i template output luce e una per i template output gas, caricati dai file `output_*.json` presenti nella cartella di lancio/applicazione.
+Se lasci "Default - tutte le colonne", l'export usa tutte le colonne standard dell'ambito corrispondente.
+Se selezioni PDF misti, la GUI genera due file: quello scelto nella finestra di salvataggio per la luce e un secondo file con suffisso `_gas` per il gas.
 
 ## Webapp locale
 

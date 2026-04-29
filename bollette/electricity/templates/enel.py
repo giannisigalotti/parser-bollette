@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import re
 
-from ..extractors import extract_with_patterns
+from ...extractors import extract_with_patterns
 from ..models import BillRecord
-from ..text_utils import parse_decimal, parse_number, sum_amounts
+from ...text_utils import parse_decimal, parse_number, sum_amounts
 
 
 _ABBR_MONTHS = {
@@ -82,7 +82,6 @@ def build_enel_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         if extracted:
             overrides[field] = extracted
 
-    # TV license: amount appears on the line just before the label in fiscal detail
     tv_match = re.search(
         r"([0-9]+,[0-9]{2})\s*€[^\n]{0,10}\n[^\n]*[Cc]anone di abbonamento alla televisione",
         raw_text,
@@ -92,7 +91,6 @@ def build_enel_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         if v:
             overrides["tv_license_eur"] = v
 
-    # Amounts in the first summary put the value before the multiline label.
     tv_summary = re.search(
         r"([0-9][0-9.,\s]*,[0-9]{2})\s*€\s*\n\s*Canone di abbonamento alla\s*\n\s*televisione per uso privato",
         raw_text,
@@ -126,7 +124,6 @@ def build_enel_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         overrides["consumption_f1_kwh"] = parse_number(fascia_match.group(3))
         overrides["consumption_kwh"] = parse_number(fascia_match.group(4))
 
-    # Billing period from "Periodo LUG. 2024 - AGO. 2024"
     period_match = re.search(
         r"Periodo\s+([A-Z]{3}\.?\s*\d{4})\s*-\s*([A-Z]{3}\.?\s*\d{4})",
         raw_text,

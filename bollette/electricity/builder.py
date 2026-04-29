@@ -3,11 +3,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 
+from ..extractors import extract_pdf_text, extract_lines, find_label_value
 from .constants import MONEY_LABELS, TEXT_LABELS
 from .extractors import (
-    extract_pdf_text,
-    extract_lines,
-    find_label_value,
     find_period,
     find_consumption,
     find_committed_power,
@@ -53,11 +51,3 @@ def _build_notes(record: BillRecord) -> str:
     if missing:
         parts.append("Campi mancanti: " + ", ".join(missing))
     return "; ".join(parts)
-
-
-def discover_pdfs(path: Path) -> list[Path]:
-    if path.is_file() and path.suffix.lower() == ".pdf":
-        return [path]
-    if path.is_dir():
-        return sorted(f for f in path.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf")
-    raise FileNotFoundError(f"Input non trovato: {path}")

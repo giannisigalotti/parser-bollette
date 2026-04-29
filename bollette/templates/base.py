@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ..constants import MONEY_LABELS, TEXT_LABELS, PERIOD_LABELS
 from ..extractors import extract_with_patterns
 from ..models import BillRecord
 
@@ -61,9 +60,6 @@ def apply_generic_template(record: BillRecord, raw_text: str, lines: list[str]) 
 
 
 __all__ = [
-    "MONEY_LABELS",
-    "TEXT_LABELS",
-    "PERIOD_LABELS",
     "build_generic_regex_overrides",
     "apply_generic_template",
 ]

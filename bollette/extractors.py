@@ -15,7 +15,6 @@ from .text_utils import (
     parse_decimal,
     parse_float_num,
     parse_number,
-    normalize_unit_rate,
     decimal_to_str,
 )
 
@@ -185,6 +184,12 @@ def infer_supplier_template(raw_text: str, lines: list[str]) -> str:
         if "periodo di conguaglio" in haystack or "periodica + conguaglio" in haystack:
             return "acea_conguaglio"
         return "acea_standard"
+    if "enel energia" in haystack:
+        return "enel"
+    if "iren mercato" in haystack:
+        return "iren"
+    if "servizio elettrico nazionale" in haystack:
+        return "sen"
     return "generic"
 
 

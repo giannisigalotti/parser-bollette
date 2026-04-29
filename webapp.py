@@ -3,11 +3,7 @@ from __future__ import annotations
 
 import argparse
 import html
-import io
-import json
-import os
 import shutil
-import tempfile
 import urllib.parse
 import uuid
 from dataclasses import asdict

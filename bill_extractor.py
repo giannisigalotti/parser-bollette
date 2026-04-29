@@ -1202,21 +1202,144 @@ def discover_pdfs(path: Path) -> list[Path]:
 
 
 def export_csv(records: list[BillRecord], output_path: Path) -> None:
+    import re
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    # Prepara dati come per l'export Excel
+    rows = [asdict(record) for record in records]
+    if not rows:
+        return
+    columns = list(rows[0].keys())
+    unit_map = {}
+    for col in columns:
+        if col.endswith('_unit_rate'):
+            units = set()
+            values = []
+            for v in [str(row[col]) for row in rows]:
+                m = re.match(r"([\d.,\-]+)\s*([\w€/\.]+)?", v.strip())
+                if m:
+                    values.append(m.group(1).replace(',', '.'))
+                    if m.group(2):
+                        units.add(m.group(2))
+                    else:
+                        units.add('')
+                else:
+                    values.append('')
+                    units.add('')
+            for i, row in enumerate(rows):
+                row[col] = values[i]
+            unit_map[col] = next(iter(units - {''}), '') if len(units - {''}) == 1 else ''
+    columns_with_units = [col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith('_unit_rate') else col for col in columns]
     with output_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=OUTPUT_COLUMNS)
+        writer = csv.DictWriter(handle, fieldnames=columns_with_units)
         writer.writeheader()
-        for record in records:
-            writer.writerow(asdict(record))
+        for row in rows:
+            out_row = {}
+            for col in columns:
+                key = col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith('_unit_rate') else col
+                out_row[key] = row[col]
+            writer.writerow(out_row)
 
 
 def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
+    import openpyxl
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Alignment, NamedStyle
+    from openpyxl.styles.numbers import FORMAT_NUMBER_00, FORMAT_DATE_DMYSLASH
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     frame = pd.DataFrame([asdict(record) for record in records], columns=OUTPUT_COLUMNS)
+
+    # Gestione colonne unit_rate: estrai valore e unità
+    unit_map = {}
+    for col in frame.columns:
+        if col.endswith('_unit_rate'):
+            # Estrai unità e valore numerico
+            units = set()
+            values = []
+            for v in frame[col].astype(str):
+                m = re.match(r"([\d.,\-]+)\s*([\w€/\.]+)?", v.strip())
+                if m:
+                    values.append(m.group(1).replace(',', '.'))
+                    if m.group(2):
+                        units.add(m.group(2))
+                    else:
+                        units.add('')
+                else:
+                    values.append('')
+                    units.add('')
+            # Sostituisci i valori nella colonna solo col numero
+            frame[col] = pd.to_numeric(values, errors="coerce")
+            # Salva l'unità (se unica) per intestazione
+            unit_map[col] = next(iter(units - {''}), '') if len(units - {''}) == 1 else ''
+
+    # Numeric columns to float
     for column in NUMERIC_COLUMNS:
         if column in frame.columns:
-            frame[column] = pd.to_numeric(frame[column], errors="coerce")
-    frame.to_excel(output_path, index=False)
+            frame[column] = pd.to_numeric(frame[column].replace("", pd.NA), errors="coerce")
+            frame[column] = frame[column].astype(float)
+
+    # Date columns
+    DATE_COLUMNS = [
+        "invoice_date", "due_date", "billing_period_start", "billing_period_end"
+    ]
+    for column in DATE_COLUMNS:
+        if column in frame.columns:
+            frame[column] = pd.to_datetime(frame[column], errors="coerce")
+
+    # Modifica intestazioni per unit_rate
+    columns_with_units = [col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith('_unit_rate') else col for col in frame.columns]
+    
+    # Write to Excel con intestazioni modificate
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        frame.to_excel(writer, index=False, header=columns_with_units)
+
+    import openpyxl
+    wb = openpyxl.load_workbook(output_path)
+    ws = wb.active
+
+    # Numeric formatting
+    for col_idx, col_name in enumerate(frame.columns, 1):
+        col_letter = get_column_letter(col_idx)
+        if col_name in ["consumption_kwh", "consumption_f1_kwh", "consumption_f2_kwh", "consumption_f3_kwh"]:
+            for cell in ws[col_letter]:
+                if cell.row == 1:
+                    continue
+                cell.number_format = "0"
+                cell.alignment = Alignment(horizontal="right")
+        elif col_name in NUMERIC_COLUMNS:
+            for cell in ws[col_letter]:
+                if cell.row == 1:
+                    continue
+                cell.number_format = FORMAT_NUMBER_00
+                cell.alignment = Alignment(horizontal="right")
+        elif col_name in DATE_COLUMNS:
+            for cell in ws[col_letter]:
+                if cell.row == 1:
+                    continue
+                # Se la cella contiene anche orario, usa formato con ora
+                if hasattr(cell.value, 'hour') and (cell.value.hour != 0 or cell.value.minute != 0 or cell.value.second != 0):
+                    cell.number_format = 'DD/MM/YYYY HH:MM:SS'
+                else:
+                    cell.number_format = 'DD/MM/YYYY'
+                cell.alignment = Alignment(horizontal="center")
+        else:
+            for cell in ws[col_letter]:
+                if cell.row == 1:
+                    continue
+                cell.alignment = Alignment(wrap_text=True, horizontal="left")
+
+    # Auto-fit column widths
+    for col_idx, col_name in enumerate(frame.columns, 1):
+        col_letter = get_column_letter(col_idx)
+        max_length = max(
+            [len(str(cell.value)) if cell.value is not None else 0 for cell in ws[col_letter]] + [len(col_name)]
+        )
+        ws.column_dimensions[col_letter].width = min(max_length + 2, 40)
+    # Imposta altezza minima per tutte le righe (eccetto header)
+    min_height = 15
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+        ws.row_dimensions[row[0].row].height = min_height
+    wb.save(output_path)
 
 
 def parse_args() -> argparse.Namespace:

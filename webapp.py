@@ -19,7 +19,7 @@ import pandas as pd
 from email.parser import BytesParser
 from email.policy import default as default_policy
 
-from bill_extractor import OUTPUT_COLUMNS, build_record
+from bollette import OUTPUT_COLUMNS, build_record
 
 
 DEFAULT_HOST = "127.0.0.1"

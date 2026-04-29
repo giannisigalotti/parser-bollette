@@ -31,18 +31,12 @@ def parse_args() -> argparse.Namespace:
         help="Percorso output (.xlsx). Contiene un foglio per elettricità e uno per gas.",
     )
     parser.add_argument(
-        "-c",
-        "--config",
-        help=(
-            "File JSON opzionale per scegliere sottoinsieme, ordine e titoli delle colonne "
-            "dell'output elettrico."
-        ),
-    )
-    parser.add_argument(
+        "-e",
         "--electricity-config",
-        help="Alias esplicito di --config per template output elettrico.",
+        help="File JSON opzionale per scegliere sottoinsieme, ordine e titoli delle colonne elettricità.",
     )
     parser.add_argument(
+        "-g",
         "--gas-config",
         help="File JSON opzionale per scegliere sottoinsieme, ordine e titoli delle colonne gas.",
     )
@@ -57,7 +51,7 @@ def main() -> None:
         output_path = Path.cwd() / output_path
     output_path = output_path.resolve()
 
-    electricity_config_path = _resolve_config_path(args.electricity_config or args.config)
+    electricity_config_path = _resolve_config_path(args.electricity_config)
     gas_config_path = _resolve_config_path(args.gas_config)
 
     try:

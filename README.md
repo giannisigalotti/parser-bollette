@@ -125,8 +125,8 @@ Di default l'output contiene tutte le colonne del parser. Puoi passare un file J
 ```bash
 python3 bill_extractor.py ./pdf_bollette \
   -o output/bollette.xlsx \
-  -c output_columns.energy_summary.json \
-  --gas-config output_gas_summary.json
+  -e output_columns.energy_summary.json \
+  -g output_gas_summary.json
 ```
 
 Formato del file:

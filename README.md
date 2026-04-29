@@ -1,104 +1,100 @@
-# Estrattore bollette luce PDF -> CSV/XLSX
+# Estrattore bollette luce e gas PDF -> XLSX
 
-Questo progetto contiene una prima versione semplice ma gia' utilizzabile di un tool che:
+Questo progetto contiene un tool rule-based che:
 
-- legge una bolletta elettrica in PDF
-- estrae i dati piu' rilevanti
-- normalizza i valori principali
-- genera un file `csv` o `xlsx` con una riga per ogni bolletta
+- legge bollette elettriche e gas in PDF
+- estrae i dati più rilevanti per ciascun servizio
+- normalizza i valori principali (date, importi, consumi)
+- genera un file `.xlsx` con un foglio per l'elettricità e uno per il gas
 - sceglie automaticamente un template di parsing in base al fornitore riconosciuto
 
-## Cosa estrae
+## Architettura
 
-Le colonne attuali sono:
+Il codice è suddiviso nel package `bollette/` con struttura simmetrica per i due servizi:
 
-- `source_file`
-- `supplier_template`
-- `supplier_name`
-- `invoice_number`
-- `invoice_date`
-- `due_date`
-- `customer_name`
-- `supply_address`
-- `pod_code`
-- `tariff_code`
-- `billing_period_start`
-- `billing_period_end`
-- `consumption_kwh`
-- `consumption_f1_kwh`
-- `consumption_f2_kwh`
-- `consumption_f3_kwh`
-- `committed_power_kw`
-- `available_power_kw`
-- `total_amount_eur`
-- `invoice_total_eur`
-- `bonus_eur`
-- `energy_cost_eur`
-- `transport_eur`
-- `system_charges_eur`
-- `taxes_eur`
-- `vat_eur`
-- `tv_license_eur`
-- tripletta `qty` / `unit_rate` / `imponibile_eur` per:
-- `energy`
-- `losses`
-- `dispbt`
-- `commercialization`
-- `capacity_market`
-- `dispatching`
-- `transport_energy`
-- `transport_fixed`
-- `transport_power`
-- `uc3`
-- `uc6_fixed`
-- `uc6_variable`
-- `arim`
-- `asos`
-- `excise`
-- `notes`
+```
+bollette/
+├── models.py               # costanti ELECTRICITY_SERVICE_TYPE / GAS_SERVICE_TYPE
+├── extractors.py           # primitivi condivisi (estrazione testo PDF, label matching)
+├── discovery.py            # classify_pdf, discover_pdfs, group_pdfs_by_service
+├── exporters.py            # export_xlsx (unico file, multi-foglio)
+├── output_config.py        # OutputColumn, load_output_config
+├── electricity/
+│   ├── models.py           # BillRecord, OUTPUT_COLUMNS, NUMERIC_COLUMNS
+│   ├── constants.py        # etichette luce (MONEY_LABELS, TEXT_LABELS, PERIOD_LABELS)
+│   ├── extractors.py       # find_period, find_consumption, infer_supplier, ...
+│   ├── builder.py          # build_record(pdf_path) -> BillRecord
+│   └── templates/          # generic, octopus, acea, enel, iren, sen, edison
+└── gas/
+    ├── models.py           # GasBillRecord, GAS_OUTPUT_COLUMNS, GAS_NUMERIC_COLUMNS
+    ├── extractors.py       # infer_gas_supplier_template
+    ├── builder.py          # build_gas_record(pdf_path) -> GasBillRecord
+    └── templates/          # generic_gas, dolomiti_gas
+```
 
-La colonna `notes` segnala i campi non trovati, utile quando cambiano layout o terminologia della bolletta.
-In alcuni formati alcune voci non sono separabili in modo pulito, quindi possono restare vuote anche se il totale bolletta e' corretto.
+## Template supportati
 
-## Architettura template
+### Elettricità
+- `generic`: fallback per bollette non ancora mappate
+- `octopus`: Octopus Energy
+- `acea_standard`: Acea bollette periodiche standard
+- `acea_conguaglio`: Acea con conguaglio/ricalcoli
+- `enel`: Enel Energia
+- `iren`: Iren Mercato
+- `sen`: Servizio Elettrico Nazionale
+- `edison`: Edison Energia
 
-Il parser ora lavora con una logica a template:
-
-- `generic`: fallback comune per bollette non ancora mappate in dettaglio
-- `octopus`: template dedicato a Octopus Energy, gia' tarato sul PDF reale fornito
-- `acea_standard`: template dedicato alle bollette Acea periodiche standard
-- `acea_conguaglio`: template dedicato alle bollette Acea con conguaglio/ricalcoli
-- `enel`: template dedicato a Enel Energia
-- `iren`: template dedicato a Iren Mercato
-- `sen`: template dedicato a Servizio Elettrico Nazionale
-- `edison`: template dedicato a Edison Energia
+### Gas
+- `generic_gas`: fallback per bollette gas non mappate
+- `dolomiti_gas`: Dolomiti Energia Gas
 
 Il template scelto viene scritto nella colonna `supplier_template`.
 
-Per le bollette `acea_conguaglio`, lo script privilegia i campi riepilogativi affidabili e lascia vuoti i dettagli componente quando le tabelle mischiano periodi storici, restituzioni acconti o ricalcoli che renderebbero fuorviante una somma diretta.
+## Cosa estrae
+
+### Elettricità (foglio "Elettricità")
+
+- `source_file`, `supplier_template`, `supplier_name`
+- `invoice_number`, `invoice_date`, `due_date`
+- `customer_name`, `supply_address`, `pod_code`, `tariff_code`
+- `billing_period_start`, `billing_period_end`
+- `consumption_kwh`, `consumption_f1_kwh`, `consumption_f2_kwh`, `consumption_f3_kwh`
+- `committed_power_kw`, `available_power_kw`
+- `total_amount_eur`, `invoice_total_eur`, `bonus_eur`
+- `energy_cost_eur`, `transport_eur`, `system_charges_eur`, `taxes_eur`, `vat_eur`, `tv_license_eur`
+- tripletta `qty` / `unit_rate` / `imponibile_eur` per: `energy`, `losses`, `dispbt`, `commercialization`, `capacity_market`, `dispatching`, `transport_energy`, `transport_fixed`, `transport_power`, `uc3`, `uc6_fixed`, `uc6_variable`, `arim`, `asos`, `excise`
+- `notes`
+
+### Gas (foglio "Gas")
+
+- `source_file`, `supplier_template`, `supplier_name`
+- `invoice_number`, `invoice_date`, `due_date`
+- `customer_name`, `supply_address`, `pdr_code`, `offer_name`
+- `billing_period_start`, `billing_period_end`
+- `consumption_smc`, `estimated_consumption_smc`, `annual_consumption_smc`
+- `reading_start`, `reading_end`, `meter_serial`
+- `gas_type`, `calorific_value`, `conversion_factor`
+- `total_amount_eur`, `invoice_total_eur`
+- `fixed_fee_eur`, `transport_eur`, `system_charges_eur`, `excise_eur`, `vat_eur`
+- tripletta `qty` / `unit_rate` / `imponibile_eur` per: `raw_consumption`, `network_fee`, `gas_distribution`
+- `notes`
+
+La colonna `notes` segnala i campi non trovati, utile quando cambiano layout o terminologia della bolletta.
 
 ## Requisiti
-
-Dipendenze Python necessarie:
 
 - `pypdf >= 4.0`
 - `pandas >= 2.0`
 - `openpyxl >= 3.1`
 - `python-dateutil >= 2.9`
 
-Su macOS con Homebrew, tkinter richiede un pacchetto aggiuntivo:
+Su macOS con Homebrew, tkinter richiede:
 
 ```bash
 brew install python-tk@3.14
 ```
 
 ## Installazione dipendenze
-
-```bash
-pip install -r requirements.txt
-```
-
-Consigliato: usa un virtual environment per isolare le dipendenze.
 
 ```bash
 python3 -m venv .venv
@@ -111,7 +107,7 @@ pip install -r requirements.txt
 Su un singolo PDF:
 
 ```bash
-python3 bill_extractor.py ./mia_bolletta.pdf -o output/bolletta.csv
+python3 bill_extractor.py ./mia_bolletta.pdf
 ```
 
 Su una cartella intera di PDF:
@@ -120,27 +116,17 @@ Su una cartella intera di PDF:
 python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
 ```
 
-L'output Excel/CSV contiene una riga per ogni PDF trovato nella cartella.
-Se la cartella contiene sia bollette luce sia bollette gas, il CLI le separa in due output:
-
-```bash
-python3 bill_extractor.py ./pdf_bollette \
-  --electricity-output output/bollette_luce.xlsx \
-  --gas-output output/bollette_gas.xlsx \
-  -c output_columns.energy_summary.json \
-  --gas-config output_gas_summary.json
-```
-
-Se passi solo `-o` e l'input e' misto, `-o` viene usato per la luce e il file gas viene creato accanto con suffisso `_gas`.
-Se l'input contiene solo gas, `-o` viene usato direttamente per il gas.
+Se la cartella contiene sia bollette luce sia bollette gas, il CLI le riconosce automaticamente e produce un unico file con due fogli: **Elettricità** e **Gas**.
 
 ### Configurazione colonne output
 
-Di default l'output contiene tutte le colonne previste dal parser, nell'ordine storico indicato sopra.
-Puoi pero' passare al CLI un file JSON per scegliere sottoinsieme, ordine e titolo delle colonne prodotte:
+Di default l'output contiene tutte le colonne del parser. Puoi passare un file JSON per scegliere sottoinsieme, ordine e titolo delle colonne:
 
 ```bash
-python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx -c output_columns.example.json
+python3 bill_extractor.py ./pdf_bollette \
+  -o output/bollette.xlsx \
+  -c output_columns.energy_summary.json \
+  --gas-config output_gas_summary.json
 ```
 
 Formato del file:
@@ -156,12 +142,7 @@ Formato del file:
 }
 ```
 
-`source` deve essere una delle colonne interne elencate nella sezione "Cosa estrae".
-`title` e' opzionale: se manca, viene usato il nome tecnico della colonna.
-La sequenza nel JSON e' la sequenza delle colonne nel file finale.
-Per i template gas si usa lo stesso formato, aggiungendo `"service_type": "gas"` e scegliendo colonne dal tracciato gas.
-Il tracciato gas completo viene usato di default quando non passi `--gas-config`; include dati cliente/contratto,
-PDR, offerta, periodo, consumi Smc, letture contatore, caratteristiche tecniche, accise/IVA e dettagli quota fissa/consumi.
+Per i template gas aggiungi `"service_type": "gas"` e scegli colonne dal tracciato gas. `source` deve essere una delle colonne elencate nella sezione "Cosa estrae".
 
 ## GUI desktop
 
@@ -169,88 +150,20 @@ PDR, offerta, periodo, consumi Smc, letture contatore, caratteristiche tecniche,
 python3 gui_bollette.py
 ```
 
-La GUI mostra due combo, una per i template output luce e una per i template output gas, caricati dai file `output_*.json` presenti nella cartella di lancio/applicazione.
-Se lasci "Default - tutte le colonne", l'export usa tutte le colonne standard dell'ambito corrispondente.
-Se selezioni PDF misti, la GUI genera due file: quello scelto nella finestra di salvataggio per la luce e un secondo file con suffisso `_gas` per il gas.
-
-## Webapp locale
-
-E' disponibile anche una piccola webapp locale con upload multiplo PDF, anteprima risultati e download di Excel/CSV.
-
-```bash
-python3 webapp.py
-```
-
-Con porta personalizzata:
-
-```bash
-python3 webapp.py --port 8080
-```
-
-Poi apri `http://127.0.0.1:8765` nel browser.
-
-## Distribuzione come eseguibile (PyInstaller)
-
-E' possibile compilare il progetto in un eseguibile autonomo che non richiede Python installato sulla macchina dell'utente finale.
-
-### Prerequisiti build
-
-```bash
-pip install -r requirements-dev.txt
-```
-
-### Compilazione
-
-```bash
-# GUI + CLI insieme
-python3 build.py
-
-# Solo GUI
-python3 build.py --gui
-
-# Solo CLI
-python3 build.py --cli
-```
-
-### Artefatti prodotti in `dist/`
-
-| Piattaforma | GUI | CLI |
-|---|---|---|
-| macOS | `EstrattoreBollette.app` | `bollette-cli` |
-| Windows | `EstrattoreBollette.exe` | `bollette-cli.exe` |
-| Linux | `EstrattoreBollette` | `bollette-cli` |
-
-Su macOS il bundle `.app` puo' essere trascinato direttamente in `/Applications`.
-
-### Build multipiattaforma
-
-PyInstaller deve girare **sul sistema operativo target**: per produrre i binari per Mac, Windows e Linux occorre eseguire `python3 build.py` su ciascuna delle tre piattaforme. E' possibile automatizzare il processo con una pipeline CI/CD (ad esempio GitHub Actions) se si vuole distribuire a piu' utenti.
+La GUI mostra due combo (una per elettricità, una per gas) con i template JSON presenti nella cartella di lancio. Selezionando uno o più PDF e confermando il salvataggio, produce un unico file `.xlsx` con i fogli corrispondenti ai servizi trovati.
 
 ## Come funziona
 
-Il tool usa una combinazione di:
+Il tool usa:
 
-- estrazione testo dal PDF
-- riconoscimento per etichette comuni nelle bollette italiane
-- normalizzazione di date in formato `YYYY-MM-DD`
-- normalizzazione importi in euro con punto decimale
-- euristiche per consumi `kWh`, POD, periodo fatturato e potenza impegnata
-- pattern mirati per gestire layout reali come Octopus Energy
-- estrazione dei dettagli economici dalla sezione `Elementi di dettaglio`
-- ricostruzione dei consumi per fascia `F1/F2/F3` a partire dalle letture
+- estrazione testo dal PDF con `pypdf`
+- riconoscimento fornitore per parole chiave → scelta del template
+- label matching per estrarre valori da layout reali
+- normalizzazione di date (`YYYY-MM-DD`), importi (euro con punto decimale) e consumi
+- merge intelligente su file esistente: aggiorna le righe già presenti per `source_file`, aggiunge le nuove
 
 ## Limiti attuali
 
-- Funziona meglio su PDF testuali; su PDF scannerizzati servira' una fase OCR.
-- Alcuni fornitori usano etichette molto diverse: in quei casi il CSV viene comunque prodotto, ma con piu' campi vuoti.
-- Questa prima versione e' rule-based, quindi non usa ancora un modello AI per interpretare layout molto anomali.
-
-## Estensione consigliata
-
-Se vuoi, nel passo successivo posso evolverlo in una versione piu' intelligente in uno di questi modi:
-
-1. script Python con fallback LLM per interpretare bollette molto diverse
-2. piccola webapp drag-and-drop
-3. Google Apps Script collegato a Drive e Sheets
-
-La base attuale e' pensata proprio per essere estesa in quella direzione senza buttare via il lavoro.
+- Funziona su PDF testuali; su PDF scannerizzati serve una fase OCR.
+- Alcuni fornitori usano etichette molto diverse: in quei casi il file viene prodotto con più campi vuoti.
+- Versione rule-based: non usa modelli AI per layout molto anomali.

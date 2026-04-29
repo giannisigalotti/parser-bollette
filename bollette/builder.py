@@ -11,6 +11,7 @@ from .extractors import (
     find_period,
     find_consumption,
     find_committed_power,
+    find_available_power,
     infer_supplier,
     infer_supplier_template,
 )
@@ -36,6 +37,7 @@ def build_record(pdf_path: Path) -> BillRecord:
     record.billing_period_start, record.billing_period_end = find_period(lines, raw_text)
     record.consumption_kwh = find_consumption(lines, raw_text)
     record.committed_power_kw = find_committed_power(lines, raw_text)
+    record.available_power_kw = find_available_power(lines, raw_text)
 
     TEMPLATE_APPLIERS.get(record.supplier_template, apply_generic_template)(record, raw_text, lines)
 
@@ -57,5 +59,5 @@ def discover_pdfs(path: Path) -> list[Path]:
     if path.is_file() and path.suffix.lower() == ".pdf":
         return [path]
     if path.is_dir():
-        return sorted(f for f in path.rglob("*.pdf") if f.is_file())
+        return sorted(f for f in path.rglob("*") if f.is_file() and f.suffix.lower() == ".pdf")
     raise FileNotFoundError(f"Input non trovato: {path}")

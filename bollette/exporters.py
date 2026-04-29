@@ -8,21 +8,27 @@ from pathlib import Path
 import pandas as pd
 
 from .models import BillRecord, OUTPUT_COLUMNS, NUMERIC_COLUMNS
+from .output_config import OutputColumn, default_output_columns
 
 
 DATE_COLUMNS = ["invoice_date", "due_date", "billing_period_start", "billing_period_end"]
 
 
-def export_csv(records: list[BillRecord], output_path: Path) -> None:
+def export_csv(
+    records: list[BillRecord],
+    output_path: Path,
+    columns: list[OutputColumn] | None = None,
+) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rows = [asdict(record) for record in records]
     if not rows:
         return
 
-    columns = list(rows[0].keys())
+    output_columns = columns or default_output_columns()
+    column_names = [col.source for col in output_columns]
     unit_map: dict[str, str] = {}
 
-    for col in columns:
+    for col in column_names:
         if not col.endswith("_unit_rate"):
             continue
         units: set[str] = set()
@@ -39,25 +45,36 @@ def export_csv(records: list[BillRecord], output_path: Path) -> None:
             row[col] = values[i]
         unit_map[col] = next(iter(units - {""}), "") if len(units - {""}) == 1 else ""
 
-    def header(col: str) -> str:
-        return col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith("_unit_rate") else col
+    def header(output_col: OutputColumn) -> str:
+        col = output_col.source
+        title = output_col.title or col
+        if output_col.title:
+            return title
+        return title + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith("_unit_rate") else title
 
-    headers = [header(col) for col in columns]
+    headers = [header(col) for col in output_columns]
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=headers)
         writer.writeheader()
         for row in rows:
-            writer.writerow({header(col): row[col] for col in columns})
+            writer.writerow({header(col): row[col.source] for col in output_columns})
 
 
-def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
+def export_xlsx(
+    records: list[BillRecord],
+    output_path: Path,
+    columns: list[OutputColumn] | None = None,
+) -> None:
     import openpyxl
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.styles.numbers import FORMAT_NUMBER_00
     from openpyxl.utils import get_column_letter
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_columns = columns or default_output_columns()
+    column_names = [col.source for col in output_columns]
     frame = pd.DataFrame([asdict(r) for r in records], columns=OUTPUT_COLUMNS)
+    frame = frame[column_names]
 
     # Estrai unità di misura dalle colonne unit_rate
     unit_map: dict[str, str] = {}
@@ -88,22 +105,31 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
     if "billing_period_start" in frame.columns:
         frame = frame.sort_values("billing_period_start", ascending=True)
 
-    def col_header(col: str) -> str:
-        return col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith("_unit_rate") else col
+    def col_header(output_col: OutputColumn) -> str:
+        col = output_col.source
+        title = output_col.title or col
+        if output_col.title:
+            return title
+        return title + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith("_unit_rate") else title
 
-    headers = [col_header(col) for col in frame.columns]
+    headers = [col_header(col) for col in output_columns]
 
     # Aggiorna file esistente invece di sovrascriverlo
     if output_path.exists():
-        existing = pd.read_excel(output_path)
-        src_col = next(c for c in existing.columns if c.startswith("source_file"))
-        existing = existing.set_index(src_col)
-        frame = frame.set_index("source_file")
-        existing.update(frame)
-        for idx in frame.index:
-            if idx not in existing.index:
-                existing.loc[idx] = frame.loc[idx]
-        frame = existing.reset_index()
+        if "source_file" in frame.columns:
+            existing = pd.read_excel(output_path)
+            header_to_source = dict(zip(headers, column_names, strict=True))
+            existing = existing.rename(columns=header_to_source)
+            if "source_file" in existing.columns:
+                existing = existing.reindex(columns=column_names)
+                existing = existing.set_index("source_file")
+                frame = frame.set_index("source_file")
+                existing.update(frame)
+                for idx in frame.index:
+                    if idx not in existing.index:
+                        existing.loc[idx] = frame.loc[idx]
+                frame = existing.reset_index()
+                frame = frame.reindex(columns=column_names)
 
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         frame.to_excel(writer, index=False, header=headers)

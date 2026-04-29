@@ -29,6 +29,7 @@ Le colonne attuali sono:
 - `consumption_f2_kwh`
 - `consumption_f3_kwh`
 - `committed_power_kw`
+- `available_power_kw`
 - `total_amount_eur`
 - `invoice_total_eur`
 - `bonus_eur`
@@ -67,6 +68,10 @@ Il parser ora lavora con una logica a template:
 - `octopus`: template dedicato a Octopus Energy, gia' tarato sul PDF reale fornito
 - `acea_standard`: template dedicato alle bollette Acea periodiche standard
 - `acea_conguaglio`: template dedicato alle bollette Acea con conguaglio/ricalcoli
+- `enel`: template dedicato a Enel Energia
+- `iren`: template dedicato a Iren Mercato
+- `sen`: template dedicato a Servizio Elettrico Nazionale
+- `edison`: template dedicato a Edison Energia
 
 Il template scelto viene scritto nella colonna `supplier_template`.
 
@@ -117,11 +122,40 @@ python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
 
 L'output Excel/CSV contiene una riga per ogni PDF trovato nella cartella.
 
+### Configurazione colonne output
+
+Di default l'output contiene tutte le colonne previste dal parser, nell'ordine storico indicato sopra.
+Puoi pero' passare al CLI un file JSON per scegliere sottoinsieme, ordine e titolo delle colonne prodotte:
+
+```bash
+python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx -c output_columns.example.json
+```
+
+Formato del file:
+
+```json
+{
+  "columns": [
+    {"source": "source_file", "title": "File"},
+    {"source": "invoice_date", "title": "Data fattura"},
+    {"source": "consumption_kwh", "title": "Consumo kWh"},
+    {"source": "total_amount_eur", "title": "Totale da pagare"}
+  ]
+}
+```
+
+`source` deve essere una delle colonne interne elencate nella sezione "Cosa estrae".
+`title` e' opzionale: se manca, viene usato il nome tecnico della colonna.
+La sequenza nel JSON e' la sequenza delle colonne nel file finale.
+
 ## GUI desktop
 
 ```bash
 python3 gui_bollette.py
 ```
+
+La GUI mostra una combo "Template output" con tutti i file `output_*.json` presenti nella cartella di lancio/applicazione.
+Se lasci "Default - tutte le colonne", l'export usa tutte le colonne standard.
 
 ## Webapp locale
 

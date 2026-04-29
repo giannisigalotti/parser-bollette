@@ -43,6 +43,10 @@ def build_sen_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
             (r"Potenza contrattualmente\s+impegnata\s+([0-9.,]+)\s+kW", "number"),
             (r"impegnata\s*\n\s*([0-9.,]+)\s+kW", "number"),
         ],
+        "available_power_kw": [
+            (r"Potenza disponibile\s+([0-9.,]+)\s+kW", "number"),
+            (r"Potenza disponibile\s*\n\s*([0-9.,]+)\s+kW", "number"),
+        ],
         "tariff_code": [
             (r"Tariffa\s+([^\n]+)", "text"),
         ],

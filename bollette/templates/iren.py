@@ -29,6 +29,9 @@ def build_iren_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         "committed_power_kw": [
             (r"Potenza impegnata\s+([0-9.,]+)\s+kW", "number"),
         ],
+        "available_power_kw": [
+            (r"Potenza disponibile\s+([0-9.,]+)\s+kW", "number"),
+        ],
         "tariff_code": [
             (r"Offerta\s+([^\n]+)", "text"),
         ],

@@ -9,6 +9,7 @@ from .acea import apply_acea_template, apply_acea_conguaglio_template
 from .enel import apply_enel_template
 from .iren import apply_iren_template
 from .sen import apply_sen_template
+from .edison import apply_edison_template
 
 TEMPLATE_APPLIERS: dict[str, Callable[[BillRecord, str, list[str]], None]] = {
     "generic":          apply_generic_template,
@@ -19,4 +20,5 @@ TEMPLATE_APPLIERS: dict[str, Callable[[BillRecord, str, list[str]], None]] = {
     "enel":             apply_enel_template,
     "iren":             apply_iren_template,
     "sen":              apply_sen_template,
+    "edison":           apply_edison_template,
 }

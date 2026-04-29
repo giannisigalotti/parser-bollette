@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
-from bill_extractor import build_record, BillRecord, export_xlsx, export_csv
+from bollette import build_record, BillRecord, export_xlsx, export_csv
 from dataclasses import asdict
 
 class BolletteApp:

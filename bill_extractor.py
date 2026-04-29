@@ -1375,6 +1375,14 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
     min_height = 15
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
         ws.row_dimensions[row[0].row].height = min_height
+    # Applica bordi e formattazione header dopo tutte le scritture
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in row:
+            cell.border = thin_border
+            if cell.row == 1:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal="center")
     wb.save(output_path)
 
 

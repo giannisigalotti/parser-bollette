@@ -149,7 +149,20 @@ def find_consumption(lines: list[str], raw_text: str) -> str:
 def find_committed_power(lines: list[str], raw_text: str) -> str:
     patterns = [
         r"potenza impegnata\D{0,10}(\d[\d.,]*)\s*kw",
-        r"potenza disponibile\D{0,10}(\d[\d.,]*)\s*kw",
+        r"potenza contrattualmente\s+impegnata\D{0,20}(\d[\d.,]*)\s*kw",
+    ]
+    haystack = slug_text("\n".join(lines) + "\n" + raw_text)
+    for pattern in patterns:
+        match = re.search(pattern, haystack, re.IGNORECASE)
+        if match:
+            return parse_number(match.group(1))
+    return ""
+
+
+def find_available_power(lines: list[str], raw_text: str) -> str:
+    patterns = [
+        r"potenza disponibile\D{0,20}(\d[\d.,]*)\s*kw",
+        r"potenza contrattualmente\s+disponibile\D{0,20}(\d[\d.,]*)\s*kw",
     ]
     haystack = slug_text("\n".join(lines) + "\n" + raw_text)
     for pattern in patterns:
@@ -190,6 +203,8 @@ def infer_supplier_template(raw_text: str, lines: list[str]) -> str:
         return "iren"
     if "servizio elettrico nazionale" in haystack:
         return "sen"
+    if "edison energia" in haystack:
+        return "edison"
     return "generic"
 
 

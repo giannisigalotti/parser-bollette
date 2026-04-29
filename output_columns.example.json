@@ -1,0 +1,36 @@
+{
+  "columns": [
+    {
+      "source": "source_file",
+      "title": "File"
+    },
+    {
+      "source": "supplier_template",
+      "title": "Template"
+    },
+    {
+      "source": "invoice_date",
+      "title": "Data fattura"
+    },
+    {
+      "source": "billing_period_start",
+      "title": "Dal"
+    },
+    {
+      "source": "billing_period_end",
+      "title": "Al"
+    },
+    {
+      "source": "consumption_kwh",
+      "title": "Consumo kWh"
+    },
+    {
+      "source": "total_amount_eur",
+      "title": "Totale da pagare"
+    },
+    {
+      "source": "notes",
+      "title": "Note"
+    }
+  ]
+}

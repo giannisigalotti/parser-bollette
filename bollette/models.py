@@ -21,6 +21,7 @@ OUTPUT_COLUMNS = [
     "consumption_f2_kwh",
     "consumption_f3_kwh",
     "committed_power_kw",
+    "available_power_kw",
     "total_amount_eur",
     "invoice_total_eur",
     "bonus_eur",
@@ -84,6 +85,7 @@ NUMERIC_COLUMNS = [
     "consumption_f2_kwh",
     "consumption_f3_kwh",
     "committed_power_kw",
+    "available_power_kw",
     "total_amount_eur",
     "invoice_total_eur",
     "bonus_eur",
@@ -160,6 +162,7 @@ class BillRecord:
     consumption_f2_kwh: str = ""
     consumption_f3_kwh: str = ""
     committed_power_kw: str = ""
+    available_power_kw: str = ""
     total_amount_eur: str = ""
     invoice_total_eur: str = ""
     bonus_eur: str = ""

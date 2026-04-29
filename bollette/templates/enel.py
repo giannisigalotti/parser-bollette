@@ -49,6 +49,10 @@ def build_enel_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str
         "committed_power_kw": [
             (r"POTENZA IMPEGNATA:\s*\n?\s*([0-9.,]+)\s*kW", "number"),
         ],
+        "available_power_kw": [
+            (r"POTENZA DISPONIBILE:\s*\n?\s*([0-9.,]+)\s*kW", "number"),
+            (r"Potenza disponibile:\s*([0-9.,]+)\s*kW", "number"),
+        ],
         "consumption_kwh": [
             (r"([0-9.]+)\s+kWh\s*\n\s*consumi rilevati", "number"),
             (r"Totale energia\s*\n[^\n]*\n[^\n]*\n[^\n]*\n\s*([0-9.]+)\s+kWh", "number"),

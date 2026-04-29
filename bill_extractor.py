@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from bollette import build_record, discover_pdfs, export_csv, export_xlsx
+from bollette import build_record, discover_pdfs, export_csv, export_xlsx, load_output_config
 
 # Re-export per compatibilità con gui_bollette e webapp
 from bollette import BillRecord, OUTPUT_COLUMNS  # noqa: F401
@@ -22,6 +22,14 @@ def parse_args() -> argparse.Namespace:
         default="output/bollette_estratte.csv",
         help="Percorso del file di output. Estensioni supportate: .csv, .xlsx",
     )
+    parser.add_argument(
+        "-c",
+        "--config",
+        help=(
+            "File JSON opzionale per scegliere sottoinsieme, ordine e titoli delle colonne "
+            "dell'output."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -32,6 +40,11 @@ def main() -> None:
     if not output_path.is_absolute():
         output_path = Path.cwd() / output_path
     output_path = output_path.resolve()
+    config_path = Path(args.config).expanduser().resolve() if args.config else None
+    try:
+        output_columns = load_output_config(config_path)
+    except (OSError, ValueError) as exc:
+        raise SystemExit(f"Configurazione output non valida: {exc}") from exc
 
     pdfs = discover_pdfs(input_path)
     if not pdfs:
@@ -41,9 +54,9 @@ def main() -> None:
 
     suffix = output_path.suffix.lower()
     if suffix == ".csv":
-        export_csv(records, output_path)
+        export_csv(records, output_path, output_columns)
     elif suffix == ".xlsx":
-        export_xlsx(records, output_path)
+        export_xlsx(records, output_path, output_columns)
     else:
         raise SystemExit("Formato output non supportato. Usa .csv oppure .xlsx")
 

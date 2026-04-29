@@ -19,7 +19,10 @@ def build_generic_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, 
             (r"\b(IT\d{3}E\d{8,})\b", "code"),
         ],
         "committed_power_kw": [
-            (r"(?:POTENZA IMPEGNATA|POTENZA DISPONIBILE)[: ]\s*([0-9.,]+)\s*kW", "number"),
+            (r"POTENZA IMPEGNATA[: ]\s*([0-9.,]+)\s*kW", "number"),
+        ],
+        "available_power_kw": [
+            (r"POTENZA DISPONIBILE[: ]\s*([0-9.,]+)\s*kW", "number"),
         ],
         "consumption_kwh": [
             (r"(?:CONSUMO FATTURATO|CONSUMO TOTALE|ENERGIA ATTIVA)[: ]\s*([0-9.,]+)\s*kWh", "number"),

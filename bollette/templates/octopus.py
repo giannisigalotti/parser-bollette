@@ -49,6 +49,10 @@ def build_octopus_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, 
             (r"POTENZA IMPEGNATA:\s*\n\s*([0-9.,]+)\s*kW", "number"),
             (r"Potenza impegnata\s*([0-9.,]+)\s*kW", "number"),
         ],
+        "available_power_kw": [
+            (r"POTENZA DISPONIBILE:\s*\n\s*([0-9.,]+)\s*kW", "number"),
+            (r"Potenza disponibile\s*([0-9.,]+)\s*kW", "number"),
+        ],
         "total_amount_eur": [
             (r"TOTALE DA PAGARE\s*\n\s*([0-9.,\-]+)\s*€", "money"),
             (r"Questo mese dovrai pagare\s*\n\s*([0-9.,\-]+)\s*€", "money"),

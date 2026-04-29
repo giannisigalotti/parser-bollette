@@ -1339,6 +1339,18 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
             [len(str(cell.value)) if cell.value is not None else 0 for cell in ws[col_letter]] + [len(col_name)]
         )
         ws.column_dimensions[col_letter].width = min(max_length + 2, 40)
+    # Formattazione header: bold, sfondo grigio chiaro
+    from openpyxl.styles import Font, PatternFill
+    header_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+    header_font = Font(bold=True)
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    # Imposta filtro sulla prima riga
+    ws.auto_filter.ref = ws.dimensions
+
     # Imposta altezza minima per tutte le righe (eccetto header)
     min_height = 15
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):

@@ -1,4 +1,4 @@
-"""Label tables used both by extractors and templates."""
+"""Label tables used by electricity extractors and templates."""
 
 MONEY_LABELS: dict[str, list[str]] = {
     "total_amount_eur": [

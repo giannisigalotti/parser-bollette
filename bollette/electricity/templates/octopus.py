@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import re
 
-from ..extractors import extract_with_patterns, extract_detail_values, extract_fascia_consumptions
+from ...extractors import extract_with_patterns
+from ..extractors import extract_detail_values, extract_fascia_consumptions
 from ..models import BillRecord
-from ..text_utils import normalize_text, parse_decimal
+from ...text_utils import normalize_text, parse_decimal
 
 
 def build_octopus_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]:
@@ -89,7 +90,6 @@ def build_octopus_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, 
         if extracted:
             overrides[field] = extracted
 
-    # Aggregated network/system amounts from itemised rows
     network_amounts = [
         parse_decimal(m.group(1))
         for m in re.finditer(

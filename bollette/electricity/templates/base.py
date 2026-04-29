@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ..extractors import extract_with_patterns
+from ...extractors import extract_with_patterns
 from ..models import BillRecord
 
 

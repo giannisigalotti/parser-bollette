@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .models import OUTPUT_COLUMNS
+from .models import ELECTRICITY_SERVICE_TYPE, GAS_SERVICE_TYPE
+from .electricity.models import OUTPUT_COLUMNS
+from .gas.models import GAS_OUTPUT_COLUMNS
 
 
 @dataclass(frozen=True)
@@ -14,23 +16,33 @@ class OutputColumn:
     title: str | None = None
 
 
-def default_output_columns() -> list[OutputColumn]:
-    return [OutputColumn(source=col) for col in OUTPUT_COLUMNS]
+def default_output_columns(service_type: str = ELECTRICITY_SERVICE_TYPE) -> list[OutputColumn]:
+    return [OutputColumn(source=col) for col in output_columns_for_service(service_type)]
 
 
-def load_output_config(config_path: Path | None) -> list[OutputColumn]:
+def load_output_config(
+    config_path: Path | None,
+    service_type: str = ELECTRICITY_SERVICE_TYPE,
+) -> list[OutputColumn]:
     if config_path is None:
-        return default_output_columns()
+        return default_output_columns(service_type)
 
     with config_path.open(encoding="utf-8") as handle:
         payload = json.load(handle)
+
+    if isinstance(payload, dict):
+        config_service = payload.get("service_type") or payload.get("domain")
+        if config_service and config_service != service_type:
+            raise ValueError(
+                f"Il file di configurazione e' per '{config_service}', non per '{service_type}'."
+            )
 
     columns_payload = payload.get("columns") if isinstance(payload, dict) else payload
     if not isinstance(columns_payload, list) or not columns_payload:
         raise ValueError("Il file di configurazione deve contenere una lista non vuota 'columns'.")
 
     columns = [_parse_column(item, idx) for idx, item in enumerate(columns_payload, start=1)]
-    _validate_columns(columns)
+    _validate_columns(columns, service_type)
     return columns
 
 
@@ -50,8 +62,8 @@ def _parse_column(item: Any, idx: int) -> OutputColumn:
     raise ValueError(f"Colonna #{idx}: formato non supportato.")
 
 
-def _validate_columns(columns: list[OutputColumn]) -> None:
-    valid = set(OUTPUT_COLUMNS)
+def _validate_columns(columns: list[OutputColumn], service_type: str) -> None:
+    valid = set(output_columns_for_service(service_type))
     seen: set[str] = set()
     invalid: list[str] = []
     duplicates: list[str] = []
@@ -67,3 +79,11 @@ def _validate_columns(columns: list[OutputColumn]) -> None:
         raise ValueError("Colonne non riconosciute: " + ", ".join(invalid))
     if duplicates:
         raise ValueError("Colonne duplicate: " + ", ".join(duplicates))
+
+
+def output_columns_for_service(service_type: str) -> list[str]:
+    if service_type == ELECTRICITY_SERVICE_TYPE:
+        return OUTPUT_COLUMNS
+    if service_type == GAS_SERVICE_TYPE:
+        return GAS_OUTPUT_COLUMNS
+    raise ValueError(f"Tipo servizio non supportato: {service_type}")

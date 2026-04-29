@@ -74,50 +74,107 @@ Per le bollette `acea_conguaglio`, lo script privilegia i campi riepilogativi af
 
 ## Requisiti
 
-Lo script usa librerie gia' presenti nel runtime di Codex:
+Dipendenze Python necessarie:
 
-- `pypdf`
-- `pandas`
-- `openpyxl`
-- `python-dateutil`
+- `pypdf >= 4.0`
+- `pandas >= 2.0`
+- `openpyxl >= 3.1`
+- `python-dateutil >= 2.9`
 
-## Esecuzione
-
-Dentro questa cartella puoi usare:
+Su macOS con Homebrew, tkinter richiede un pacchetto aggiuntivo:
 
 ```bash
-/Users/gianni/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 bill_extractor.py ./mia_bolletta.pdf -o output/bolletta.csv
+brew install python-tk@3.14
 ```
 
-Oppure su una cartella intera di PDF:
+## Installazione dipendenze
 
 ```bash
-/Users/gianni/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
+pip install -r requirements.txt
+```
+
+Consigliato: usa un virtual environment per isolare le dipendenze.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # su Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Esecuzione da riga di comando
+
+Su un singolo PDF:
+
+```bash
+python3 bill_extractor.py ./mia_bolletta.pdf -o output/bolletta.csv
+```
+
+Su una cartella intera di PDF:
+
+```bash
+python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
 ```
 
 L'output Excel/CSV contiene una riga per ogni PDF trovato nella cartella.
+
+## GUI desktop
+
+```bash
+python3 gui_bollette.py
+```
 
 ## Webapp locale
 
 E' disponibile anche una piccola webapp locale con upload multiplo PDF, anteprima risultati e download di Excel/CSV.
 
-Avvio:
-
 ```bash
-/Users/gianni/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 webapp.py
+python3 webapp.py
 ```
 
 Con porta personalizzata:
 
 ```bash
-/Users/gianni/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 webapp.py --port 8080
+python3 webapp.py --port 8080
 ```
 
-Poi apri:
+Poi apri `http://127.0.0.1:8765` nel browser.
 
-```text
-http://127.0.0.1:8765
+## Distribuzione come eseguibile (PyInstaller)
+
+E' possibile compilare il progetto in un eseguibile autonomo che non richiede Python installato sulla macchina dell'utente finale.
+
+### Prerequisiti build
+
+```bash
+pip install -r requirements-dev.txt
 ```
+
+### Compilazione
+
+```bash
+# GUI + CLI insieme
+python3 build.py
+
+# Solo GUI
+python3 build.py --gui
+
+# Solo CLI
+python3 build.py --cli
+```
+
+### Artefatti prodotti in `dist/`
+
+| Piattaforma | GUI | CLI |
+|---|---|---|
+| macOS | `EstrattoreBollette.app` | `bollette-cli` |
+| Windows | `EstrattoreBollette.exe` | `bollette-cli.exe` |
+| Linux | `EstrattoreBollette` | `bollette-cli` |
+
+Su macOS il bundle `.app` puo' essere trascinato direttamente in `/Applications`.
+
+### Build multipiattaforma
+
+PyInstaller deve girare **sul sistema operativo target**: per produrre i binari per Mac, Windows e Linux occorre eseguire `python3 build.py` su ciascuna delle tre piattaforme. E' possibile automatizzare il processo con una pipeline CI/CD (ad esempio GitHub Actions) se si vuole distribuire a piu' utenti.
 
 ## Come funziona
 

@@ -1,0 +1,83 @@
+name: Release Build
+
+# Si attiva solo quando viene pushato un tag nella forma v1.2.3
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+# Permesso per creare la release e caricare gli artefatti
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false   # se una piattaforma fallisce le altre continuano
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_suffix: mac
+          - os: windows-latest
+            artifact_suffix: windows
+          - os: ubuntu-latest
+            artifact_suffix: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout sorgenti
+        uses: actions/checkout@v4
+
+      # macOS: Python via Homebrew per avere tkinter incluso
+      - name: Setup Python con tkinter (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python-tk@3.12
+          "$(brew --prefix python@3.12)/libexec/bin/python3" -m venv .venv
+          echo "$(pwd)/.venv/bin" >> $GITHUB_PATH
+
+      # Windows e Linux: tkinter e' incluso di default
+      - name: Setup Python (Windows / Linux)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installa dipendenze
+        run: pip install -r requirements-dev.txt
+
+      - name: Build (GUI + CLI)
+        run: python build.py
+
+      # ── Packaging ────────────────────────────────────────────────────────────
+
+      - name: Pacchettizza artefatti (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          zip -r EstrattoreBollette-mac.zip dist/EstrattoreBollette.app
+          cp dist/bollette-cli bollette-cli-mac
+
+      - name: Pacchettizza artefatti (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\EstrattoreBollette `
+                           -DestinationPath EstrattoreBollette-windows.zip
+          Copy-Item dist\bollette-cli.exe bollette-cli-windows.exe
+
+      - name: Pacchettizza artefatti (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          zip -r EstrattoreBollette-linux.zip dist/EstrattoreBollette
+          cp dist/bollette-cli bollette-cli-linux
+
+      # ── Upload alla Release ───────────────────────────────────────────────────
+
+      - name: Pubblica sulla GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true   # genera changelog automatico dai commit
+          files: |
+            EstrattoreBollette-${{ matrix.artifact_suffix }}.zip
+            bollette-cli-${{ matrix.artifact_suffix }}*

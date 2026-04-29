@@ -1,0 +1,22 @@
+# Build artifacts
+dist/
+build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Sessione Claude Code
+.claude/
+.nwave/

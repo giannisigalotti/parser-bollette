@@ -152,34 +152,49 @@ NUMERIC_COLUMNS = [
     "tv_license_eur",
     "energy_qty",
     "energy_imponibile_eur",
+    "energy_unit_rate",
     "losses_qty",
     "losses_imponibile_eur",
+    "losses_unit_rate",
     "dispbt_qty",
     "dispbt_imponibile_eur",
+    "dispbt_unit_rate",
     "commercialization_qty",
     "commercialization_imponibile_eur",
+    "commercialization_unit_rate",
     "capacity_market_qty",
     "capacity_market_imponibile_eur",
+    "capacity_market_unit_rate",
     "dispatching_qty",
     "dispatching_imponibile_eur",
+    "dispatching_unit_rate",
     "transport_energy_qty",
     "transport_energy_imponibile_eur",
+    "transport_energy_unit_rate",
     "transport_fixed_qty",
     "transport_fixed_imponibile_eur",
+    "transport_fixed_unit_rate",
     "transport_power_qty",
     "transport_power_imponibile_eur",
+    "transport_power_unit_rate",
     "uc3_qty",
     "uc3_imponibile_eur",
+    "uc3_unit_rate",
     "uc6_fixed_qty",
     "uc6_fixed_imponibile_eur",
+    "uc6_fixed_unit_rate",
     "uc6_variable_qty",
     "uc6_variable_imponibile_eur",
+    "uc6_variable_unit_rate",
     "arim_qty",
     "arim_imponibile_eur",
+    "arim_unit_rate",
     "asos_qty",
     "asos_imponibile_eur",
+    "asos_unit_rate",
     "excise_qty",
     "excise_imponibile_eur",
+    "excise_unit_rate",
 ]
 
 
@@ -1383,6 +1398,14 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = Alignment(horizontal="center")
+    # Rimuovi eventuali righe "Totale" già presenti
+    rows_to_delete = []
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=1):
+        if str(row[0].value).strip().lower() == "totale":
+            rows_to_delete.append(row[0].row)
+    for row_idx in reversed(rows_to_delete):
+        ws.delete_rows(row_idx)
+
     # Aggiungi riga totali in fondo
     total_row_idx = ws.max_row + 1
     last_data_row = ws.max_row  # prima di aggiungere la riga totale
@@ -1392,11 +1415,14 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
         if col_name in NUMERIC_COLUMNS:
             cell.value = f"=SUM({col_letter}2:{col_letter}{last_data_row})"
             cell.number_format = FORMAT_NUMBER_00
+            cell.alignment = Alignment(horizontal="right")
         elif col_idx == 1:
             cell.value = "Totale"
+            cell.alignment = Alignment(horizontal="left")
+        else:
+            cell.alignment = Alignment(horizontal="center")
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
         cell.border = thin_border
     wb.save(output_path)
 

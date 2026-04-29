@@ -1243,7 +1243,7 @@ def export_csv(records: list[BillRecord], output_path: Path) -> None:
 def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
     import openpyxl
     from openpyxl.utils import get_column_letter
-    from openpyxl.styles import Alignment, NamedStyle
+    from openpyxl.styles import Alignment, NamedStyle, Border, Side, Font, PatternFill
     from openpyxl.styles.numbers import FORMAT_NUMBER_00, FORMAT_DATE_DMYSLASH
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1292,6 +1292,20 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
         frame = frame.sort_values("billing_period_start", ascending=True)
     # Modifica intestazioni per unit_rate
     columns_with_units = [col + (f" ({unit_map[col]})" if unit_map.get(col) else "") if col.endswith('_unit_rate') else col for col in frame.columns]
+
+    # Se il file esiste già, carica e aggiorna/appende
+    if output_path.exists():
+        existing = pd.read_excel(output_path)
+        # Cerca la colonna source_file (può avere nome diverso se già esportato)
+        source_col = [c for c in existing.columns if c.startswith("source_file")][0]
+        existing = existing.set_index(source_col)
+        frame = frame.set_index("source_file")
+        # Aggiorna o aggiungi
+        existing.update(frame)
+        for idx in frame.index:
+            if idx not in existing.index:
+                existing.loc[idx] = frame.loc[idx]
+        frame = existing.reset_index()
     
     # Write to Excel con intestazioni modificate
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
@@ -1340,13 +1354,19 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
         )
         ws.column_dimensions[col_letter].width = min(max_length + 2, 40)
     # Formattazione header: bold, sfondo grigio chiaro
-    from openpyxl.styles import Font, PatternFill
     header_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
     header_font = Font(bold=True)
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     for cell in ws[1]:
         cell.fill = header_fill
         cell.font = header_font
         cell.alignment = Alignment(horizontal="center")
+        cell.border = thin_border
+
+    # Applica bordo a tutte le celle
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
+        for cell in row:
+            cell.border = thin_border
 
     # Imposta filtro sulla prima riga
     ws.auto_filter.ref = ws.dimensions

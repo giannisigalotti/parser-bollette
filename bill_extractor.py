@@ -1383,6 +1383,20 @@ def export_xlsx(records: list[BillRecord], output_path: Path) -> None:
                 cell.fill = header_fill
                 cell.font = header_font
                 cell.alignment = Alignment(horizontal="center")
+    # Aggiungi riga totali in fondo
+    total_row_idx = ws.max_row + 1
+    for col_idx, col_name in enumerate(frame.columns, 1):
+        col_letter = get_column_letter(col_idx)
+        cell = ws[f"{col_letter}{total_row_idx}"]
+        if col_name in NUMERIC_COLUMNS:
+            cell.value = f"=SUM({col_letter}2:{col_letter}{ws.max_row})"
+            cell.number_format = FORMAT_NUMBER_00
+        elif col_idx == 1:
+            cell.value = "Totale"
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = thin_border
     wb.save(output_path)
 
 

@@ -20,6 +20,10 @@ OUTPUT_COLUMNS = [
     "consumption_f1_kwh",
     "consumption_f2_kwh",
     "consumption_f3_kwh",
+    "reactive_energy_kvarh",
+    "reactive_energy_f1_kvarh",
+    "reactive_energy_f2_kvarh",
+    "reactive_energy_f3_kvarh",
     "committed_power_kw",
     "available_power_kw",
     "total_amount_eur",
@@ -84,6 +88,10 @@ NUMERIC_COLUMNS = [
     "consumption_f1_kwh",
     "consumption_f2_kwh",
     "consumption_f3_kwh",
+    "reactive_energy_kvarh",
+    "reactive_energy_f1_kvarh",
+    "reactive_energy_f2_kvarh",
+    "reactive_energy_f3_kvarh",
     "committed_power_kw",
     "available_power_kw",
     "total_amount_eur",
@@ -161,6 +169,10 @@ class BillRecord:
     consumption_f1_kwh: str = ""
     consumption_f2_kwh: str = ""
     consumption_f3_kwh: str = ""
+    reactive_energy_kvarh: str = ""
+    reactive_energy_f1_kvarh: str = ""
+    reactive_energy_f2_kvarh: str = ""
+    reactive_energy_f3_kvarh: str = ""
     committed_power_kw: str = ""
     available_power_kw: str = ""
     total_amount_eur: str = ""

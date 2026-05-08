@@ -19,6 +19,7 @@ __pycache__/
 
 # Office temporary lock files
 ~$*.xlsx
+~$*.xlsm
 
 # Sessione Claude Code
 .claude/

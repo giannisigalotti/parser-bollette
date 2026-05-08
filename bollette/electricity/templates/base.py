@@ -48,6 +48,10 @@ def build_generic_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, 
         "tv_license_eur": [
             (r"(?:CANONE RAI|CANONE TV|CANONE DI ABBONAMENTO ALLA TELEVISIONE)[^\n]*[: ]?\s*([0-9.,\-]+)\s*€", "money"),
         ],
+        "customer_name": [
+            (r"DATI CLIENTE\s*\n\s*CODICE CLIENTE:\s*[0-9A-Z]+\s*\n\s*([^\n]+)", "text"),
+            (r"Gentile\s+([^\n,]+)", "text"),
+        ],
     }
     overrides: dict[str, str] = {}
     for field, field_patterns in patterns.items():

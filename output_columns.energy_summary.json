@@ -50,6 +50,22 @@
       "title": "F3"
     },
     {
+      "source": "reactive_energy_kvarh",
+      "title": "Energia reattiva totale"
+    },
+    {
+      "source": "reactive_energy_f1_kvarh",
+      "title": "Reattiva F1"
+    },
+    {
+      "source": "reactive_energy_f2_kvarh",
+      "title": "Reattiva F2"
+    },
+    {
+      "source": "reactive_energy_f3_kvarh",
+      "title": "Reattiva F3"
+    },
+    {
       "source": "transport_fixed_imponibile_eur",
       "title": "Costo quota fissa"
     },

@@ -39,6 +39,7 @@ bollette/
 - `octopus`: Octopus Energy
 - `acea_standard`: Acea bollette periodiche standard
 - `acea_conguaglio`: Acea con conguaglio/ricalcoli
+- `a2a`: A2A Energia, incluso conguaglio/chiusura contratto
 - `enel`: Enel Energia
 - `iren`: Iren Mercato
 - `sen`: Servizio Elettrico Nazionale
@@ -59,6 +60,7 @@ Il template scelto viene scritto nella colonna `supplier_template`.
 - `customer_name`, `supply_address`, `pod_code`, `tariff_code`
 - `billing_period_start`, `billing_period_end`
 - `consumption_kwh`, `consumption_f1_kwh`, `consumption_f2_kwh`, `consumption_f3_kwh`
+- `reactive_energy_kvarh`, `reactive_energy_f1_kvarh`, `reactive_energy_f2_kvarh`, `reactive_energy_f3_kvarh`
 - `committed_power_kw`, `available_power_kw`
 - `total_amount_eur`, `invoice_total_eur`, `bonus_eur`
 - `energy_cost_eur`, `transport_eur`, `system_charges_eur`, `taxes_eur`, `vat_eur`, `tv_license_eur`

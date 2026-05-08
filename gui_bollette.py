@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from pathlib import Path
 from bollette import (
     build_gas_record,
@@ -13,6 +13,10 @@ from bollette.models import ELECTRICITY_SERVICE_TYPE, GAS_SERVICE_TYPE
 
 APP_DIR = Path(__file__).resolve().parent
 DEFAULT_TEMPLATE_LABEL = "Default - tutte le colonne"
+MAX_DISPLAYED_FILES = 8
+SAVE_UPDATE = "update"
+SAVE_OVERWRITE = "overwrite"
+SAVE_CANCEL = "cancel"
 
 
 class BolletteApp:
@@ -24,6 +28,7 @@ class BolletteApp:
         self.gas_output_templates = self.find_output_templates(GAS_SERVICE_TYPE)
         self.electricity_output_template = tk.StringVar(value=DEFAULT_TEMPLATE_LABEL)
         self.gas_output_template = tk.StringVar(value=DEFAULT_TEMPLATE_LABEL)
+        self.progress_value = tk.IntVar(value=0)
 
         frm = ttk.Frame(root, padding=20)
         frm.pack(fill="both", expand=True)
@@ -63,6 +68,14 @@ class BolletteApp:
         ttk.Button(frm, text="Estrai e salva", command=self.process).pack(anchor="center", pady=(10, 0))
         self.status = ttk.Label(frm, text="", foreground="blue")
         self.status.pack(anchor="w", pady=(10, 0))
+        self.progress = ttk.Progressbar(
+            frm,
+            orient="horizontal",
+            mode="determinate",
+            variable=self.progress_value,
+            maximum=1,
+        )
+        self.progress.pack(fill="x", pady=(6, 0))
 
     def find_output_templates(self, service_type):
         templates = []
@@ -95,43 +108,137 @@ class BolletteApp:
         )
         self.files = list(files)
         if self.files:
-            self.file_label.config(text="\n".join([Path(f).name for f in self.files]), foreground="black")
+            self.file_label.config(text=self.selected_files_label(), foreground="black")
         else:
             self.file_label.config(text="Nessun file selezionato", foreground="gray")
+
+    def selected_files_label(self):
+        names = [Path(f).name for f in self.files]
+        if len(names) <= MAX_DISPLAYED_FILES:
+            return "\n".join(names)
+
+        shown = names[:MAX_DISPLAYED_FILES]
+        remaining = len(names) - MAX_DISPLAYED_FILES
+        return "\n".join(shown + [f"... altri {remaining} file selezionati"])
+
+    def reset_progress(self, maximum):
+        self.progress.configure(maximum=max(maximum, 1))
+        self.progress_value.set(0)
+        self.root.update_idletasks()
+
+    def advance_progress(self, message):
+        self.progress_value.set(self.progress_value.get() + 1)
+        self.status.config(text=message)
+        self.root.update_idletasks()
+
+    def choose_output_path(self):
+        out_dir = filedialog.askdirectory(
+            title="Scegli cartella di destinazione",
+        )
+        if not out_dir:
+            return None, SAVE_CANCEL
+
+        filename = simpledialog.askstring(
+            "Nome file",
+            "Nome file Excel:",
+            initialvalue="bollette_estratte.xlsx",
+            parent=self.root,
+        )
+        if not filename:
+            return None, SAVE_CANCEL
+
+        output_path = Path(out_dir) / Path(filename).name
+        if output_path.suffix.lower() != ".xlsx":
+            output_path = output_path.with_suffix(".xlsx")
+
+        if not output_path.exists():
+            return output_path, SAVE_UPDATE
+
+        choice = self.ask_existing_file_action(output_path)
+        if choice == SAVE_CANCEL:
+            return None, SAVE_CANCEL
+        return output_path, choice
+
+    def ask_existing_file_action(self, output_path):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("File esistente")
+        dialog.transient(self.root)
+        dialog.resizable(False, False)
+        choice = tk.StringVar(value=SAVE_CANCEL)
+
+        frm = ttk.Frame(dialog, padding=18)
+        frm.pack(fill="both", expand=True)
+        ttk.Label(
+            frm,
+            text=f"Il file esiste gia':\n{output_path}\n\nVuoi aggiornarlo o sovrascriverlo?",
+            justify="left",
+            wraplength=520,
+        ).pack(anchor="w")
+
+        buttons = ttk.Frame(frm)
+        buttons.pack(anchor="e", pady=(16, 0))
+
+        def close_with(value):
+            choice.set(value)
+            dialog.destroy()
+
+        ttk.Button(buttons, text="Aggiorna", command=lambda: close_with(SAVE_UPDATE)).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Sovrascrivi", command=lambda: close_with(SAVE_OVERWRITE)).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Annulla", command=lambda: close_with(SAVE_CANCEL)).pack(side="left")
+
+        dialog.protocol("WM_DELETE_WINDOW", lambda: close_with(SAVE_CANCEL))
+        dialog.grab_set()
+        dialog.wait_window()
+        return choice.get()
 
     def process(self):
         if not self.files:
             messagebox.showerror("Errore", "Seleziona almeno un file PDF.")
             return
-        self.status.config(text="Estrazione in corso...")
+
+        output_path, save_mode = self.choose_output_path()
+        if output_path is None:
+            self.status.config(text="Operazione annullata.")
+            self.progress_value.set(0)
+            return
+
+        total_files = len(self.files)
+        total_steps = total_files + total_files + 1
+        self.reset_progress(total_steps)
+        self.status.config(text=f"Esame PDF 0/{total_files}...")
         self.root.update_idletasks()
         try:
             grouped = {ELECTRICITY_SERVICE_TYPE: [], GAS_SERVICE_TYPE: []}
-            for filename in self.files:
+            for idx, filename in enumerate(self.files, start=1):
                 path = Path(filename)
                 grouped.setdefault(classify_pdf(path), []).append(path)
+                self.advance_progress(f"Esame PDF {idx}/{total_files}...")
             if not grouped[ELECTRICITY_SERVICE_TYPE] and not grouped[GAS_SERVICE_TYPE]:
                 raise Exception("Nessun dato estratto.")
 
-            out_path = filedialog.asksaveasfilename(
-                defaultextension=".xlsx",
-                filetypes=[("Excel", "*.xlsx")],
-                title="Salva file di output"
-            )
-            if not out_path:
-                self.status.config(text="Operazione annullata.")
-                return
-
-            output_path = Path(out_path)
             sheets = []
+            processed = 0
             if grouped[ELECTRICITY_SERVICE_TYPE]:
-                records = [build_record(path) for path in grouped[ELECTRICITY_SERVICE_TYPE]]
+                records = []
+                for path in grouped[ELECTRICITY_SERVICE_TYPE]:
+                    records.append(build_record(path))
+                    processed += 1
+                    self.advance_progress(f"Estrazione dati {processed}/{total_files}...")
                 sheets.append(("Elettricità", records, self.selected_output_columns(ELECTRICITY_SERVICE_TYPE), ELECTRICITY_SERVICE_TYPE))
             if grouped[GAS_SERVICE_TYPE]:
-                records = [build_gas_record(path) for path in grouped[GAS_SERVICE_TYPE]]
+                records = []
+                for path in grouped[GAS_SERVICE_TYPE]:
+                    records.append(build_gas_record(path))
+                    processed += 1
+                    self.advance_progress(f"Estrazione dati {processed}/{total_files}...")
                 sheets.append(("Gas", records, self.selected_output_columns(GAS_SERVICE_TYPE), GAS_SERVICE_TYPE))
 
+            self.status.config(text="Generazione Excel...")
+            self.root.update_idletasks()
+            if save_mode == SAVE_OVERWRITE and output_path.exists():
+                output_path.unlink()
             export_xlsx(sheets, output_path)
+            self.advance_progress("Generazione Excel completata.")
             self.status.config(text=f"File salvato: {output_path}")
             messagebox.showinfo("Successo", f"File salvato:\n{output_path}")
         except Exception as e:

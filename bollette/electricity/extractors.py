@@ -119,6 +119,8 @@ def infer_supplier_template(raw_text: str, lines: list[str]) -> str:
         return "acea_standard"
     if "enel energia" in haystack:
         return "enel"
+    if "a2a energia" in haystack:
+        return "a2a"
     if "iren mercato" in haystack:
         return "iren"
     if "servizio elettrico nazionale" in haystack:

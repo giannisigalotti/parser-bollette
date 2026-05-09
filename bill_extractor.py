@@ -28,7 +28,7 @@ def parse_args() -> argparse.Namespace:
         "-o",
         "--output",
         default="output/bollette_estratte.xlsx",
-        help="Percorso output (.xlsx). Contiene un foglio per elettricità e uno per gas.",
+        help="Percorso output (.xlsx o .xlsm). Contiene un foglio per elettricità e uno per gas.",
     )
     parser.add_argument(
         "-e",
@@ -71,8 +71,11 @@ def main() -> None:
     if not electricity_pdfs and not gas_pdfs:
         raise SystemExit("Nessun dato estratto.")
 
-    if output_path.suffix.lower() != ".xlsx":
-        raise SystemExit("Formato output non supportato. Usa .xlsx")
+    suffix = output_path.suffix.lower()
+    if suffix == ".xls":
+        raise SystemExit("Formato .xls non supportato. Usa .xlsx o .xlsm.")
+    if suffix not in {".xlsx", ".xlsm"}:
+        raise SystemExit("Formato output non supportato. Usa .xlsx o .xlsm.")
 
     sheets = []
     if electricity_pdfs:

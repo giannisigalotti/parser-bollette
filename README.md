@@ -1,11 +1,11 @@
-# Estrattore bollette luce e gas PDF -> XLSX
+# Estrattore bollette luce e gas PDF -> Excel
 
 Questo progetto contiene un tool rule-based che:
 
 - legge bollette elettriche e gas in PDF
 - estrae i dati più rilevanti per ciascun servizio
 - normalizza i valori principali (date, importi, consumi)
-- genera un file `.xlsx` con un foglio per l'elettricità e uno per il gas
+- genera un file `.xlsx` o aggiorna un template `.xlsm` con un foglio per l'elettricità e uno per il gas
 - sceglie automaticamente un template di parsing in base al fornitore riconosciuto
 
 ## Architettura
@@ -120,6 +120,8 @@ python3 bill_extractor.py ./pdf_bollette -o output/bollette.xlsx
 
 Se la cartella contiene sia bollette luce sia bollette gas, il CLI le riconosce automaticamente e produce un unico file con due fogli: **Elettricità** e **Gas**.
 
+L'output può essere `.xlsx` oppure `.xlsm`. Se il file `.xlsm` esiste già, il tool aggiorna solo i fogli dati prodotti dal parser, preservando macro e altri tab del workbook. Il formato legacy `.xls` non è supportato.
+
 ### Configurazione colonne output
 
 Di default l'output contiene tutte le colonne del parser. Puoi passare un file JSON per scegliere sottoinsieme, ordine e titolo delle colonne:
@@ -152,7 +154,7 @@ Per i template gas aggiungi `"service_type": "gas"` e scegli colonne dal traccia
 python3 gui_bollette.py
 ```
 
-La GUI mostra due combo (una per elettricità, una per gas) con i template JSON presenti nella cartella di lancio. Selezionando uno o più PDF e confermando il salvataggio, produce un unico file `.xlsx` con i fogli corrispondenti ai servizi trovati.
+La GUI mostra due combo (una per elettricità, una per gas) con i template JSON presenti nella cartella di lancio. Selezionando uno o più PDF e confermando il salvataggio, produce o aggiorna un unico file `.xlsx`/`.xlsm` con i fogli corrispondenti ai servizi trovati.
 
 ## Come funziona
 

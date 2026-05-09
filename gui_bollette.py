@@ -17,6 +17,7 @@ MAX_DISPLAYED_FILES = 8
 SAVE_UPDATE = "update"
 SAVE_OVERWRITE = "overwrite"
 SAVE_CANCEL = "cancel"
+SUPPORTED_EXCEL_SUFFIXES = {".xlsx", ".xlsm"}
 
 
 class BolletteApp:
@@ -148,8 +149,15 @@ class BolletteApp:
             return None, SAVE_CANCEL
 
         output_path = Path(out_dir) / Path(filename).name
-        if output_path.suffix.lower() != ".xlsx":
+        suffix = output_path.suffix.lower()
+        if not suffix:
             output_path = output_path.with_suffix(".xlsx")
+        elif suffix == ".xls":
+            messagebox.showerror("Formato non supportato", "Il formato .xls non e' supportato. Usa .xlsx o .xlsm.")
+            return None, SAVE_CANCEL
+        elif suffix not in SUPPORTED_EXCEL_SUFFIXES:
+            messagebox.showerror("Formato non supportato", "Usa un file .xlsx o .xlsm.")
+            return None, SAVE_CANCEL
 
         if not output_path.exists():
             return output_path, SAVE_UPDATE

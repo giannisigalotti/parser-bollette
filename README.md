@@ -65,6 +65,8 @@ Il template scelto viene scritto nella colonna `supplier_template`.
 - `total_amount_eur`, `invoice_total_eur`, `bonus_eur`
 - `energy_cost_eur`, `transport_eur`, `system_charges_eur`, `taxes_eur`, `vat_eur`, `tv_license_eur`
 - tripletta `qty` / `unit_rate` / `imponibile_eur` per: `energy`, `losses`, `dispbt`, `commercialization`, `capacity_market`, `dispatching`, `transport_energy`, `transport_fixed`, `transport_power`, `uc3`, `uc6_fixed`, `uc6_variable`, `arim`, `asos`, `excise`
+- `confidence`: quality score 0-100 dei valori estratti
+- `confidence_notes`: `ok` se `confidence` e' 100, altrimenti indica i motivi della riduzione
 - `notes`
 
 ### Gas (foglio "Gas")

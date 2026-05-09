@@ -80,10 +80,13 @@ OUTPUT_COLUMNS = [
     "excise_qty",
     "excise_unit_rate",
     "excise_imponibile_eur",
+    "confidence",
+    "confidence_notes",
     "notes",
 ]
 
 NUMERIC_COLUMNS = [
+    "confidence",
     "consumption_kwh",
     "consumption_f1_kwh",
     "consumption_f2_kwh",
@@ -229,4 +232,6 @@ class BillRecord:
     excise_qty: str = ""
     excise_unit_rate: str = ""
     excise_imponibile_eur: str = ""
+    confidence: str = ""
+    confidence_notes: str = ""
     notes: str = ""

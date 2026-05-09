@@ -14,6 +14,7 @@ from .extractors import (
     infer_supplier_template,
 )
 from .models import BillRecord
+from .quality import compute_confidence_details
 from .templates import TEMPLATE_APPLIERS
 from .templates.base import apply_generic_template
 
@@ -39,12 +40,19 @@ def build_record(pdf_path: Path) -> BillRecord:
 
     TEMPLATE_APPLIERS.get(record.supplier_template, apply_generic_template)(record, raw_text, lines)
 
+    confidence, confidence_reasons = compute_confidence_details(record, raw_text)
+    record.confidence = str(confidence)
+    record.confidence_notes = "ok" if confidence == 100 else "; ".join(confidence_reasons)
     record.notes = _build_notes(record)
     return record
 
 
 def _build_notes(record: BillRecord) -> str:
-    missing = [k for k, v in asdict(record).items() if k not in {"source_file", "notes"} and not v]
+    missing = [
+        k
+        for k, v in asdict(record).items()
+        if k not in {"source_file", "confidence", "confidence_notes", "notes"} and not v
+    ]
     parts: list[str] = []
     if record.notes:
         parts.append(record.notes)

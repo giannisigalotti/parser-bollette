@@ -7,7 +7,7 @@ from .gas.models import GasBillRecord, GAS_OUTPUT_COLUMNS, GAS_NUMERIC_COLUMNS
 from .gas.builder import build_gas_record
 from .discovery import classify_pdf, discover_pdfs, group_pdfs_by_service
 from .exporters import export_xlsx, SheetSpec
-from .output_config import OutputColumn, load_output_config
+from .output_config import OutputColumn, load_output_config, load_output_config_label
 
 __all__ = [
     "BillRecord",
@@ -25,4 +25,5 @@ __all__ = [
     "export_xlsx",
     "SheetSpec",
     "load_output_config",
+    "load_output_config_label",
 ]

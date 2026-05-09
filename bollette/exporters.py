@@ -11,6 +11,7 @@ import pandas as pd
 
 from .models import ELECTRICITY_SERVICE_TYPE, GAS_SERVICE_TYPE
 from .electricity.models import BillRecord, NUMERIC_COLUMNS, OUTPUT_COLUMNS
+from .electricity.quality import refine_quality_for_output
 from .gas.models import GasBillRecord, GAS_NUMERIC_COLUMNS, GAS_OUTPUT_COLUMNS
 from .output_config import OutputColumn, default_output_columns
 
@@ -191,6 +192,8 @@ def _prepare_sheet(
     forced_headers: list[str] | None = None,
 ) -> _PreparedSheet:
     output_columns = columns or default_output_columns(service_type)
+    if service_type == ELECTRICITY_SERVICE_TYPE:
+        _refine_electricity_confidence(records, output_columns)
     column_names = forced_column_names or [col.source for col in output_columns]
     model_columns = _model_columns(service_type)
     numeric_columns = _numeric_columns(service_type)
@@ -247,6 +250,16 @@ def _prepare_sheet(
     return _PreparedSheet(sheet_name, frame, headers, numeric_columns)
 
 
+def _refine_electricity_confidence(records: list[Record], output_columns: list[OutputColumn]) -> None:
+    selected_fields = [col.source for col in output_columns]
+    optional_fields = {col.source for col in output_columns if col.optional}
+    for record in records:
+        if isinstance(record, BillRecord):
+            confidence, confidence_notes = refine_quality_for_output(record, selected_fields, optional_fields)
+            record.confidence = str(confidence)
+            record.confidence_notes = confidence_notes
+
+
 def _export_existing_xlsm(sheets: list[SheetSpec], output_path: Path) -> None:
     with ZipFile(output_path, "r") as archive:
         sheet_paths = _workbook_sheet_paths(archive)
@@ -262,7 +275,7 @@ def _export_existing_xlsm(sheets: list[SheetSpec], output_path: Path) -> None:
                 raise ValueError(f"Il file .xlsm non contiene il foglio '{sheet_name}'.")
             sheet_xml = archive.read(sheet_path)
             sheet_xml_by_name[sheet_name] = sheet_xml
-            column_names, headers = _worksheet_schema_from_xml(
+            column_names, headers, positions = _worksheet_schema_from_xml(
                 sheet_xml,
                 shared_strings,
                 columns,
@@ -272,7 +285,12 @@ def _export_existing_xlsm(sheets: list[SheetSpec], output_path: Path) -> None:
                 raise ValueError(f"Impossibile leggere le intestazioni del foglio '{sheet_name}'.")
             forced_columns[sheet_name] = column_names
             forced_headers[sheet_name] = headers
-            existing_sheets[sheet_name] = _worksheet_to_frame_from_xml(sheet_xml, shared_strings, column_names)
+            existing_sheets[sheet_name] = _worksheet_to_frame_from_xml(
+                sheet_xml,
+                shared_strings,
+                column_names,
+                positions,
+            )
 
         prepared = [
             _prepare_sheet(
@@ -344,13 +362,24 @@ def _worksheet_schema_from_xml(
     shared_strings: list[str],
     columns: list[OutputColumn] | None,
     service_type: str,
-) -> tuple[list[str], list[str]]:
+) -> tuple[list[str], list[str], dict[str, int]]:
     model_columns = set(_model_columns(service_type))
     configured_columns = columns or default_output_columns(service_type)
     header_to_source = {col.source: col.source for col in configured_columns}
     header_to_source.update({col.title: col.source for col in configured_columns if col.title})
     header_to_source.update({col: col for col in model_columns})
     first_row = _worksheet_row_values(sheet_xml, shared_strings, row_number=1)
+    positions: dict[str, int] = {}
+    for col_idx, header_value in first_row.items():
+        header = str(header_value or "").strip()
+        source = header_to_source.get(header)
+        if source and source in model_columns and source not in positions:
+            positions[source] = col_idx
+
+    if columns is not None:
+        column_names = [col.source for col in configured_columns]
+        headers = [col.title or col.source for col in configured_columns]
+        return column_names, headers, positions
 
     column_names: list[str] = []
     headers: list[str] = []
@@ -363,13 +392,15 @@ def _worksheet_schema_from_xml(
             break
         column_names.append(source)
         headers.append(header)
-    return column_names, headers
+        positions[source] = col_idx
+    return column_names, headers, positions
 
 
 def _worksheet_to_frame_from_xml(
     sheet_xml: bytes,
     shared_strings: list[str],
     column_names: list[str],
+    positions: dict[str, int],
 ) -> pd.DataFrame:
     main_ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
     root = ET.fromstring(sheet_xml)
@@ -379,10 +410,19 @@ def _worksheet_to_frame_from_xml(
         if row_number < 2:
             continue
         values = [None] * len(column_names)
+        row_values: dict[int, object] = {}
         for cell in row.findall(f"{{{main_ns}}}c"):
             col_idx = _cell_col_index(cell.attrib.get("r", ""))
-            if 1 <= col_idx <= len(column_names):
-                values[col_idx - 1] = _cell_value(cell, shared_strings)
+            if col_idx:
+                row_values[col_idx] = _cell_value(cell, shared_strings)
+        for idx, column_name in enumerate(column_names):
+            source_col_idx = positions.get(column_name)
+            if not source_col_idx:
+                continue
+            value = row_values.get(source_col_idx)
+            if column_name in DATE_COLUMNS and isinstance(value, (int, float)):
+                value = _date_from_excel_serial(float(value))
+            values[idx] = value
         if any(value is not None for value in values):
             rows.append(values)
     return pd.DataFrame(rows, columns=column_names)
@@ -439,6 +479,23 @@ def _write_sheet_xml(sheet_xml: bytes, prepared: _PreparedSheet) -> bytes:
         sheet_data = ET.SubElement(root, f"{{{main_ns}}}sheetData")
 
     style_by_col = _column_styles_from_sheet_xml(sheet_xml)
+    header_row = None
+    for row in sheet_data.findall(f"{{{main_ns}}}row"):
+        if int(row.attrib.get("r", "0") or 0) == 1:
+            header_row = row
+            break
+    if header_row is None:
+        header_row = ET.Element(f"{{{main_ns}}}row", {"r": "1"})
+        sheet_data.insert(0, header_row)
+    for cell in list(header_row.findall(f"{{{main_ns}}}c")):
+        header_row.remove(cell)
+    for col_idx, header in enumerate(prepared.headers, 1):
+        attrs = {"r": f"{_col_letter(col_idx)}1"}
+        if style := style_by_col.get(col_idx):
+            attrs["s"] = style
+        cell_el = ET.SubElement(header_row, f"{{{main_ns}}}c", attrs)
+        _set_cell_xml_value(cell_el, header)
+
     for row in list(sheet_data):
         if int(row.attrib.get("r", "0") or 0) >= 2:
             sheet_data.remove(row)
@@ -510,6 +567,10 @@ def _excel_serial(value: datetime) -> float:
     base = datetime(1899, 12, 30)
     delta = value.replace(tzinfo=None) - base
     return delta.days + (delta.seconds + delta.microseconds / 1_000_000) / 86400
+
+
+def _date_from_excel_serial(value: float) -> datetime:
+    return datetime(1899, 12, 30) + pd.to_timedelta(value, unit="D").to_pytimedelta()
 
 
 def _format_number(value: float) -> str:

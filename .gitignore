@@ -21,6 +21,9 @@ __pycache__/
 ~$*.xlsx
 ~$*.xlsm
 
+# Local GUI preferences
+.gui_bollette_config.json
+
 # Sessione Claude Code
 .claude/
 .nwave/

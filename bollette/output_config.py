@@ -14,6 +14,19 @@ from .gas.models import GAS_OUTPUT_COLUMNS
 class OutputColumn:
     source: str
     title: str | None = None
+    optional: bool = False
+
+
+def load_output_config_label(config_path: Path) -> str:
+    try:
+        with config_path.open(encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError, TypeError):
+        return config_path.name
+    if not isinstance(payload, dict):
+        return config_path.name
+    label = payload.get("description") or payload.get("label") or payload.get("name") or payload.get("title")
+    return label.strip() if isinstance(label, str) and label.strip() else config_path.name
 
 
 def default_output_columns(service_type: str = ELECTRICITY_SERVICE_TYPE) -> list[OutputColumn]:
@@ -53,11 +66,14 @@ def _parse_column(item: Any, idx: int) -> OutputColumn:
     if isinstance(item, dict):
         source = item.get("source") or item.get("field") or item.get("name")
         title = item.get("title") or item.get("header")
+        optional = item.get("optional", False)
         if not isinstance(source, str) or not source.strip():
             raise ValueError(f"Colonna #{idx}: manca il campo 'source'.")
         if title is not None and not isinstance(title, str):
             raise ValueError(f"Colonna #{idx}: il campo 'title' deve essere una stringa.")
-        return OutputColumn(source=source.strip(), title=title.strip() if title else None)
+        if not isinstance(optional, bool):
+            raise ValueError(f"Colonna #{idx}: il campo 'optional' deve essere booleano.")
+        return OutputColumn(source=source.strip(), title=title.strip() if title else None, optional=optional)
 
     raise ValueError(f"Colonna #{idx}: formato non supportato.")
 

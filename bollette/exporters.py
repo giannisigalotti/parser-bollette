@@ -261,6 +261,7 @@ def _refine_electricity_confidence(records: list[Record], output_columns: list[O
 
 
 def _export_existing_xlsm(sheets: list[SheetSpec], output_path: Path) -> None:
+    tmp_path = output_path.with_suffix(".tmp.xlsm")
     with ZipFile(output_path, "r") as archive:
         sheet_paths = _workbook_sheet_paths(archive)
         shared_strings = _read_shared_strings(archive)
@@ -309,12 +310,18 @@ def _export_existing_xlsm(sheets: list[SheetSpec], output_path: Path) -> None:
             for ps in prepared
         }
 
-        tmp_path = output_path.with_suffix(".tmp.xlsm")
         with ZipFile(tmp_path, "w", ZIP_DEFLATED) as target:
             for item in archive.infolist():
                 data = prepared_by_path.get(item.filename)
                 target.writestr(item, data if data is not None else archive.read(item.filename))
+
+    try:
         tmp_path.replace(output_path)
+    except PermissionError as exc:
+        raise PermissionError(
+            f"Impossibile aggiornare '{output_path}'. "
+            "Verifica che il file non sia aperto in Excel e di avere permessi di scrittura nella cartella."
+        ) from exc
 
 
 def _workbook_sheet_paths(archive: ZipFile) -> dict[str, str]:

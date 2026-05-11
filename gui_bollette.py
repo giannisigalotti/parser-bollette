@@ -1,4 +1,5 @@
 import json
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 from pathlib import Path
@@ -13,8 +14,9 @@ from bollette import (
 from bollette.models import ELECTRICITY_SERVICE_TYPE, GAS_SERVICE_TYPE
 
 
-APP_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = APP_DIR / ".gui_bollette_config.json"
+SOURCE_DIR = Path(__file__).resolve().parent
+RUNTIME_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else SOURCE_DIR
+CONFIG_PATH = RUNTIME_DIR / ".gui_bollette_config.json"
 DEFAULT_TEMPLATE_LABEL = "Default - tutte le colonne"
 MAX_DISPLAYED_FILES = 8
 SAVE_UPDATE = "update"
@@ -127,13 +129,38 @@ class BolletteApp:
 
     def find_output_templates(self, service_type):
         templates = []
-        for path in sorted(APP_DIR.glob("output_*.json")):
-            try:
-                load_output_config(path, service_type)
-            except (OSError, ValueError):
-                continue
-            templates.append(path)
+        seen: set[Path] = set()
+        for directory in self.output_template_dirs():
+            for path in sorted(directory.glob("output_*.json")):
+                resolved = path.resolve()
+                if resolved in seen:
+                    continue
+                seen.add(resolved)
+                try:
+                    load_output_config(path, service_type)
+                except (OSError, ValueError):
+                    continue
+                templates.append(path)
         return templates
+
+    def output_template_dirs(self):
+        dirs = [RUNTIME_DIR, SOURCE_DIR, Path.cwd()]
+        pyinstaller_temp = getattr(sys, "_MEIPASS", None)
+        if pyinstaller_temp:
+            dirs.append(Path(pyinstaller_temp))
+
+        unique_dirs: list[Path] = []
+        seen: set[Path] = set()
+        for directory in dirs:
+            try:
+                resolved = directory.resolve()
+            except OSError:
+                continue
+            if resolved in seen or not resolved.is_dir():
+                continue
+            seen.add(resolved)
+            unique_dirs.append(resolved)
+        return unique_dirs
 
     def template_label_map(self, templates):
         labels = {}

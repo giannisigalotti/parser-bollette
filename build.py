@@ -33,7 +33,7 @@ def check_pyinstaller() -> None:
 
 def build_gui() -> None:
     print("=== Build GUI (EstrattoreBollette) ===")
-    run(["pyinstaller", "--clean", str(ROOT / "gui_bollette.spec")])
+    run(["pyinstaller", "--clean", "--noconfirm", str(ROOT / "gui_bollette.spec")])
     if sys.platform == "darwin":
         print(f"App bundle: {DIST / 'EstrattoreBollette.app'}")
     else:
@@ -42,7 +42,7 @@ def build_gui() -> None:
 
 def build_cli() -> None:
     print("=== Build CLI (bollette-cli) ===")
-    run(["pyinstaller", "--clean", str(ROOT / "bill_extractor.spec")])
+    run(["pyinstaller", "--clean", "--noconfirm", str(ROOT / "bill_extractor.spec")])
     suffix = ".exe" if sys.platform == "win32" else ""
     print(f"Eseguibile: {DIST / f'bollette-cli{suffix}'}")
 

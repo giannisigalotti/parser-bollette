@@ -42,8 +42,14 @@ def build_a2a_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
             (r"Spesa per oneri di sistema:\s*([0-9.,]+)\s*€", "money"),
             (r"SPESA PER ONERI DI SISTEMA\s*€\s*([0-9.,]+)", "money"),
         ],
+        "safeguard_component_eur": [
+            (r"Componente\s+CSAL:\s*([0-9.,]+)\s*€", "money"),
+            (r"Componente\s+CSAL[^\n]*\n[^\n]*€\s*([0-9.,]+)", "money"),
+            (r"componente\s+di\s+salvaguardia[^\n:]*[: ]\s*([0-9.,]+)\s*€", "money"),
+        ],
         "taxes_eur": [
-            (r"Totale imposte e IVA:\s*([0-9.,]+)\s*€", "money"),
+            (r"TOTALE IMPOSTE\s*€\s*([0-9.,]+)", "money"),
+            (r"Totale imposte:\s*([0-9.,]+)\s*€", "money"),
         ],
         "invoice_total_eur": [
             (r"TOTALE BOLLETTA:\s*([0-9.,]+)\s*€", "money"),
@@ -110,6 +116,7 @@ def build_a2a_regex_overrides(raw_text: str, lines: list[str]) -> dict[str, str]
     excise = _extract_a2a_excise(raw_text)
     if excise:
         overrides["excise_qty"], overrides["excise_unit_rate"], overrides["excise_imponibile_eur"] = excise
+        overrides["taxes_eur"] = excise[2]
 
     transport = _extract_a2a_transport_details(lines)
     overrides.update(transport)

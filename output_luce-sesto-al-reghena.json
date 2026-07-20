@@ -29,6 +29,7 @@
     {"source": "energy_cost_eur"},
     {"source": "transport_eur"},
     {"source": "system_charges_eur"},
+    {"source": "safeguard_component_eur", "optional": true},
     {"source": "taxes_eur"},
     {"source": "vat_eur"},
     {"source": "tv_license_eur", "optional": true},

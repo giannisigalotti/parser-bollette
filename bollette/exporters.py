@@ -478,9 +478,16 @@ def _cell_value(cell: ET.Element, shared_strings: list[str]) -> object:
 def _write_sheet_xml(sheet_xml: bytes, prepared: _PreparedSheet) -> bytes:
     main_ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
     rel_ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+    mc_ns = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+    x14ac_ns = "http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac"
+    xr_ns = "http://schemas.microsoft.com/office/spreadsheetml/2014/revision"
     ET.register_namespace("", main_ns)
     ET.register_namespace("r", rel_ns)
+    ET.register_namespace("mc", mc_ns)
+    ET.register_namespace("x14ac", x14ac_ns)
+    ET.register_namespace("xr", xr_ns)
     root = ET.fromstring(sheet_xml)
+    _normalize_worksheet_ignorable_prefixes(root)
     sheet_data = root.find(f"{{{main_ns}}}sheetData")
     if sheet_data is None:
         sheet_data = ET.SubElement(root, f"{{{main_ns}}}sheetData")
@@ -534,6 +541,35 @@ def _write_sheet_xml(sheet_xml: bytes, prepared: _PreparedSheet) -> bytes:
         auto_filter.set("ref", f"A1:{_col_letter(max_col)}{max_row}")
 
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
+def _normalize_worksheet_ignorable_prefixes(root: ET.Element) -> None:
+    mc_ns = "http://schemas.openxmlformats.org/markup-compatibility/2006"
+    prefix_by_namespace = {
+        "http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac": "x14ac",
+        "http://schemas.microsoft.com/office/spreadsheetml/2014/revision": "xr",
+        "http://schemas.microsoft.com/office/spreadsheetml/2015/revision2": "xr2",
+        "http://schemas.microsoft.com/office/spreadsheetml/2016/revision3": "xr3",
+    }
+    used_prefixes: set[str] = set()
+    for element in root.iter():
+        if element.tag.startswith("{"):
+            namespace = element.tag[1:].split("}", 1)[0]
+            if prefix := prefix_by_namespace.get(namespace):
+                used_prefixes.add(prefix)
+        for attr_name in element.attrib:
+            if not attr_name.startswith("{"):
+                continue
+            namespace = attr_name[1:].split("}", 1)[0]
+            if prefix := prefix_by_namespace.get(namespace):
+                used_prefixes.add(prefix)
+
+    ignorable_attr = f"{{{mc_ns}}}Ignorable"
+    if used_prefixes:
+        ordered = [prefix for prefix in ("x14ac", "xr", "xr2", "xr3") if prefix in used_prefixes]
+        root.set(ignorable_attr, " ".join(ordered))
+    elif ignorable_attr in root.attrib:
+        del root.attrib[ignorable_attr]
 
 
 def _column_styles_from_sheet_xml(sheet_xml: bytes) -> dict[int, str]:

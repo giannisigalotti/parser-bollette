@@ -38,6 +38,7 @@ NUMERIC_RANGES = {
     "energy_cost_eur": (-1_000_000, 10_000_000),
     "transport_eur": (-1_000_000, 10_000_000),
     "system_charges_eur": (-1_000_000, 10_000_000),
+    "safeguard_component_eur": (-1_000_000, 10_000_000),
     "taxes_eur": (-1_000_000, 10_000_000),
     "vat_eur": (-1_000_000, 10_000_000),
     "tv_license_eur": (-1_000_000, 10_000_000),

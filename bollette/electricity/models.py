@@ -32,6 +32,7 @@ OUTPUT_COLUMNS = [
     "energy_cost_eur",
     "transport_eur",
     "system_charges_eur",
+    "safeguard_component_eur",
     "taxes_eur",
     "vat_eur",
     "tv_license_eur",
@@ -103,6 +104,7 @@ NUMERIC_COLUMNS = [
     "energy_cost_eur",
     "transport_eur",
     "system_charges_eur",
+    "safeguard_component_eur",
     "taxes_eur",
     "vat_eur",
     "tv_license_eur",
@@ -184,6 +186,7 @@ class BillRecord:
     energy_cost_eur: str = ""
     transport_eur: str = ""
     system_charges_eur: str = ""
+    safeguard_component_eur: str = ""
     taxes_eur: str = ""
     vat_eur: str = ""
     tv_license_eur: str = ""
